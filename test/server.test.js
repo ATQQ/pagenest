@@ -1,0 +1,154 @@
+import assert from "node:assert/strict";
+import fs from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import test from "node:test";
+
+import { createPaperMDServer } from "../src/server.js";
+
+async function start(root, token = "") {
+  const app = await createPaperMDServer({ root, token });
+  await new Promise((resolve, reject) => {
+    app.server.once("error", reject);
+    app.server.listen(0, "127.0.0.1", resolve);
+  });
+  const { port } = app.server.address();
+  return { ...app, base: `http://127.0.0.1:${port}` };
+}
+
+test("serves bootstrap and saves a document through the API", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "papermd-server-"));
+  await fs.writeFile(path.join(root, "README.md"), "# Home\n\nInitial.\n");
+  const app = await start(root);
+  t.after(async () => {
+    await new Promise((resolve) => app.server.close(resolve));
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  const bootstrap = await fetch(`${app.base}/api/bootstrap`).then((response) => response.json());
+  assert.equal(bootstrap.documents.length, 1);
+  const document = bootstrap.documents[0];
+
+  const response = await fetch(`${app.base}/api/docs/${document.id}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      markdown: "# Home\n\nUpdated through API.\n",
+      baseHash: document.hash,
+    }),
+  });
+  assert.equal(response.status, 200);
+  const saved = await response.json();
+  assert.equal(saved.saved, true);
+  assert.match(await fs.readFile(path.join(root, "README.md"), "utf8"), /through API/);
+});
+
+test("requires the access token when configured", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "papermd-token-"));
+  await fs.writeFile(path.join(root, "README.md"), "# Home\n");
+  const app = await start(root, "secret-token");
+  t.after(async () => {
+    await new Promise((resolve) => app.server.close(resolve));
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  assert.equal((await fetch(`${app.base}/api/health`)).status, 401);
+  assert.equal(
+    (
+      await fetch(`${app.base}/api/health`, {
+        headers: { "x-papermd-token": "secret-token" },
+      })
+    ).status,
+    200,
+  );
+});
+
+test("redirects a query token into an HttpOnly cookie", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "papermd-cookie-"));
+  await fs.writeFile(path.join(root, "README.md"), "# Home\n");
+  const app = await start(root, "secret-token");
+  t.after(async () => {
+    await new Promise((resolve) => app.server.close(resolve));
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  const redirect = await fetch(`${app.base}/api/health?token=secret-token`, {
+    redirect: "manual",
+  });
+  assert.equal(redirect.status, 302);
+  assert.equal(redirect.headers.get("location"), "/api/health");
+  assert.match(redirect.headers.get("set-cookie") || "", /HttpOnly/);
+  assert.match(redirect.headers.get("set-cookie") || "", /SameSite=Strict/);
+
+  const cookie = (redirect.headers.get("set-cookie") || "").split(";")[0];
+  const health = await fetch(`${app.base}/api/health`, {
+    headers: { cookie },
+  });
+  assert.equal(health.status, 200);
+});
+
+test("serves document details, history, and restores an earlier version", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "papermd-history-"));
+  await fs.writeFile(path.join(root, "README.md"), "# Home\n\nFirst.\n");
+  const app = await start(root);
+  t.after(async () => {
+    await new Promise((resolve) => app.server.close(resolve));
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  const bootstrap = await fetch(`${app.base}/api/bootstrap`).then((response) =>
+    response.json(),
+  );
+  const original = bootstrap.documents[0];
+  const details = await fetch(`${app.base}/api/docs/${original.id}`).then((response) =>
+    response.json(),
+  );
+  assert.equal(details.doc.markdown, original.markdown);
+  assert.deepEqual(details.versions, []);
+
+  const saved = await fetch(`${app.base}/api/docs/${original.id}`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      markdown: "# Home\n\nSecond version.\n",
+      baseHash: original.hash,
+    }),
+  }).then((response) => response.json());
+  assert.equal(saved.versions.length, 1);
+
+  const versions = await fetch(`${app.base}/api/docs/${original.id}/versions`).then(
+    (response) => response.json(),
+  );
+  assert.equal(versions.versions.length, 1);
+  assert.equal(versions.versions[0].reason, "保存前快照");
+
+  const version = await fetch(
+    `${app.base}/api/docs/${original.id}/versions/${versions.versions[0].id}`,
+  ).then((response) => response.json());
+  assert.match(version.version.markdown, /First/);
+
+  const restored = await fetch(
+    `${app.base}/api/docs/${original.id}/versions/${versions.versions[0].id}/restore`,
+    { method: "POST" },
+  ).then((response) => response.json());
+  assert.equal(restored.restored, true);
+  assert.match(await fs.readFile(path.join(root, "README.md"), "utf8"), /First/);
+  assert.equal(restored.versions[0].reason, "恢复前自动存档");
+});
+
+test("returns a usable empty bootstrap for a directory without Markdown", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "papermd-empty-"));
+  const app = await start(root);
+  t.after(async () => {
+    await new Promise((resolve) => app.server.close(resolve));
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  const response = await fetch(`${app.base}/api/bootstrap`);
+  assert.equal(response.status, 200);
+  const bootstrap = await response.json();
+  assert.equal(bootstrap.documentCount, 0);
+  assert.deepEqual(bootstrap.documents, []);
+  assert.deepEqual(bootstrap.versions, {});
+  assert.equal(bootstrap.rootName, path.basename(root));
+});

@@ -1,0 +1,33 @@
+{
+  "name": "papermd-studio",
+  "version": "0.1.0",
+  "description": "A local-first Markdown reading, editing, and version history studio.",
+  "type": "module",
+  "bin": {
+    "papermd": "./bin/papermd.js"
+  },
+  "exports": "./src/server.js",
+  "files": [
+    "bin",
+    "src",
+    "public",
+    "README.md",
+    "TECHNICAL_PLAN.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node ./bin/papermd.js .",
+    "start": "node ./bin/papermd.js .",
+    "test": "node --test"
+  },
+  "keywords": [
+    "markdown",
+    "editor",
+    "local-first",
+    "cli"
+  ],
+  "license": "MIT"
+}
