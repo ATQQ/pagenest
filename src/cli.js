@@ -4,18 +4,19 @@ import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 
-import { startPaperMDServer } from "./server.js";
+import { startPageNestServer } from "./server.js";
 import { isLoopbackHost } from "./library.js";
 
 const require = createRequire(import.meta.url);
 const { version: packageVersion } = require("../package.json");
 
-const HELP = `PaperMD / 纸页 ${packageVersion}
+const HELP = `PageNest / 页栖 ${packageVersion}
 
 把一个 Markdown 目录变成可在浏览器里阅读、编辑和回溯的本地工作台。
 
 用法:
-  papermd [directory] [options]
+  pn [directory] [options]
+  pagenest [directory] [options]
 
 选项:
   -p, --port <number>   监听端口，默认 4321
@@ -27,9 +28,9 @@ const HELP = `PaperMD / 纸页 ${packageVersion}
   -v, --version         显示版本
 
 示例:
-  papermd ./docs
-  papermd . --port 8080 --no-open
-  papermd ./notes --host 0.0.0.0
+  pn ./docs
+  pn . --port 8080 --no-open
+  pagenest ./notes --host 0.0.0.0
 `;
 
 function takeValue(args, index, option) {
@@ -170,7 +171,7 @@ export async function runCli(args) {
   }
 
   const root = path.resolve(options.directory || process.cwd());
-  const { server, library, address } = await startPaperMDServer({
+  const { server, library, address } = await startPageNestServer({
     root,
     host: options.host,
     port: options.port,
@@ -189,7 +190,7 @@ export async function runCli(args) {
       : "";
 
   console.log("");
-  console.log("  纸页 PaperMD");
+  console.log("  页栖 PageNest");
   console.log(`  目录  ${library.root}`);
   console.log(`  地址  ${accessUrl}`);
   if (lanUrl) console.log(`  局域网 ${lanUrl}`);

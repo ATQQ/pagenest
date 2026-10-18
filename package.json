@@ -1,10 +1,11 @@
 {
-  "name": "papermd-studio",
+  "name": "pagenest",
   "version": "0.1.0",
-  "description": "A local-first Markdown reading, editing, and version history studio.",
+  "description": "PageNest / 页栖: a local-first Markdown reading, editing, and version history studio.",
   "type": "module",
   "bin": {
-    "papermd": "./bin/papermd.js"
+    "pn": "./bin/pagenest.js",
+    "pagenest": "./bin/pagenest.js"
   },
   "exports": "./src/server.js",
   "files": [
@@ -19,8 +20,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "node ./bin/papermd.js .",
-    "start": "node ./bin/papermd.js .",
+    "dev": "node ./bin/pagenest.js .",
+    "start": "node ./bin/pagenest.js .",
     "test": "node --test"
   },
   "keywords": [

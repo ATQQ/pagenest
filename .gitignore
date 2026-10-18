@@ -1,5 +1,5 @@
 node_modules/
-.papermd/
+.pagenest/
 .DS_Store
 *.log
 coverage/

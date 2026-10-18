@@ -4,10 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { Library, PaperMDError } from "../src/library.js";
+import { Library, PageNestError } from "../src/library.js";
 
 async function fixture() {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "papermd-library-"));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "pagenest-library-"));
   await fs.mkdir(path.join(root, "guides"), { recursive: true });
   await fs.writeFile(path.join(root, "README.md"), "# Home\n\nFirst copy.\n");
   await fs.writeFile(path.join(root, "guides", "start.md"), "# Start\n\nGuide.\n");
@@ -36,15 +36,15 @@ test("rejects path traversal and unsupported extensions", async (t) => {
 
   assert.throws(
     () => library.normalizeDocumentPath("../secret.md"),
-    (error) => error instanceof PaperMDError && error.code === "INVALID_PATH",
+    (error) => error instanceof PageNestError && error.code === "INVALID_PATH",
   );
   assert.throws(
-    () => library.normalizeDocumentPath(".papermd/state.md"),
-    (error) => error instanceof PaperMDError && error.code === "INVALID_PATH",
+    () => library.normalizeDocumentPath(".pagenest/state.md"),
+    (error) => error instanceof PageNestError && error.code === "INVALID_PATH",
   );
   assert.throws(
     () => library.normalizeDocumentPath("notes.txt"),
-    (error) => error instanceof PaperMDError && error.code === "INVALID_PATH",
+    (error) => error instanceof PageNestError && error.code === "INVALID_PATH",
   );
 });
 
@@ -61,7 +61,7 @@ test("detects external changes and refuses a stale save", async (t) => {
       baseHash: document.hash,
     }),
     (error) =>
-      error instanceof PaperMDError &&
+      error instanceof PageNestError &&
       error.status === 409 &&
       error.details.current.markdown.includes("Changed elsewhere"),
   );

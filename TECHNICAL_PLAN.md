@@ -1,11 +1,11 @@
-# PaperMD 技术方案
+# 页栖 PageNest 技术方案
 
 ## 1. 目标与边界
 
-PaperMD 的目标是把任意本地 Markdown 目录转换成一个可直接分享使用的浏览器工作台：
+PageNest 的目标是把任意本地 Markdown 目录转换成一个可直接分享使用的浏览器工作台：
 
 ```bash
-papermd ~/notes
+pn ~/notes
 ```
 
 首版聚焦单机、本地优先和个人使用，不引入账号、数据库、云同步或多人实时协作。
@@ -50,7 +50,7 @@ papermd ~/notes
 ┌──────────────────▼──────────────────────┐
 │ Markdown root/                          │
 │   *.md                                  │
-│   .papermd/history/<docId>/             │
+│   .pagenest/history/<docId>/             │
 └─────────────────────────────────────────┘
 ```
 
@@ -58,7 +58,7 @@ papermd ~/notes
 
 | 模块 | 职责 | 不负责 |
 | --- | --- | --- |
-| `bin/papermd.js` | 进程入口、错误退出码 | 业务逻辑 |
+| `bin/pagenest.js` | 进程入口、错误退出码 | 业务逻辑 |
 | `src/cli.js` | 参数解析、监听地址、token、打开浏览器 | 文件读写 |
 | `src/server.js` | HTTP、静态资源、API、SSE、安全响应头 | Markdown 语义 |
 | `src/library.js` | 目录扫描、路径安全、保存、历史、恢复、搜索 | 浏览器交互 |
@@ -116,7 +116,7 @@ papermd ~/notes
 }
 ```
 
-`localStorage["papermd.ui.v1"]` 只用于阅读体验恢复。清除浏览器存储不会丢失正文或历史。
+`localStorage["pagenest.ui.v1"]` 只用于阅读体验恢复。清除浏览器存储不会丢失正文或历史。
 
 ## 5. HTTP API
 
@@ -170,7 +170,7 @@ scan current file ── hash differs? ── yes ──► 409 + current disk d
 content unchanged? ── yes ──► saved: false
         │ no
         ▼
-snapshot current disk markdown to .papermd/history
+snapshot current disk markdown to .pagenest/history
         │
         ▼
 atomic write new markdown
@@ -230,10 +230,10 @@ Markdown 被拆成可编辑块：标题、段落、列表、任务、引用、�
 
 - 默认绑定 `127.0.0.1`。
 - 非 loopback 地址自动生成随机 token。
-- token 支持 URL 查询参数、`X-PaperMD-Token` Header 和 HttpOnly Cookie；查询参数首次使用后重定向到不含 token 的 URL。
+- token 支持 URL 查询参数、`X-PageNest-Token` Header 和 HttpOnly Cookie；查询参数首次使用后重定向到不含 token 的 URL。
 - Cookie 使用 `SameSite=Strict`；跨站写请求还会被 Origin 校验拒绝。
 - 静态资源路径限制在 `public/`；文档路径限制在用户指定根目录。
-- 文档扫描跳过符号链接、隐藏目录、`.git`、`.papermd` 和 `node_modules`。
+- 文档扫描跳过符号链接、隐藏目录、`.git`、`.pagenest` 和 `node_modules`。
 - 正文写入使用原子替换，并保留原文件权限。
 - CSP 禁止外部脚本、外部样式和 frame 嵌入。
 
@@ -279,7 +279,7 @@ Markdown 被拆成可编辑块：标题、段落、列表、任务、引用、�
 - 无多人协同、账号、权限、云同步。
 - 不处理相对图片、附件和跨文档链接解析。
 - 富文本编辑适合常见 GFM；复杂结构建议源码模式。
-- 正式 npm 包名待定，当前工作名为 `papermd-studio`。
+- npm 包名 `pagenest`，同时注册 `pn` 与 `pagenest` 两个 bin。
 
 建议路线：
 

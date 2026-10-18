@@ -1,7 +1,19 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 
 import { parseArguments } from "../src/cli.js";
+
+test("registers both the short and descriptive CLI commands", () => {
+  const packageJson = JSON.parse(
+    fs.readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+  );
+  assert.equal(packageJson.name, "pagenest");
+  assert.deepEqual(packageJson.bin, {
+    pn: "./bin/pagenest.js",
+    pagenest: "./bin/pagenest.js",
+  });
+});
 
 test("parses directory, port, host, and browser options", () => {
   const options = parseArguments([

@@ -3,14 +3,14 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 const DOCUMENT_EXTENSIONS = new Set([".md", ".markdown", ".mdown"]);
-const IGNORED_DIRECTORIES = new Set([".git", ".papermd", "node_modules"]);
+const IGNORED_DIRECTORIES = new Set([".git", ".pagenest", "node_modules"]);
 const VERSION_LIMIT = 200;
 const MAX_DOCUMENTS = 20_000;
 
-export class PaperMDError extends Error {
+export class PageNestError extends Error {
   constructor(status, code, message, details = null) {
     super(message);
-    this.name = "PaperMDError";
+    this.name = "PageNestError";
     this.status = status;
     this.code = code;
     this.details = details;
@@ -87,24 +87,24 @@ export class Library {
     const root = await fs.realpath(path.resolve(rootDirectory));
     const stat = await fs.stat(root);
     if (!stat.isDirectory()) {
-      throw new PaperMDError(400, "NOT_A_DIRECTORY", "The document root must be a directory.");
+      throw new PageNestError(400, "NOT_A_DIRECTORY", "The document root must be a directory.");
     }
     return new Library(root);
   }
 
   constructor(root) {
     this.root = root;
-    this.stateDirectory = path.join(root, ".papermd");
+    this.stateDirectory = path.join(root, ".pagenest");
     this.historyDirectory = path.join(this.stateDirectory, "history");
   }
 
   normalizeDocumentPath(input, { appendExtension = false } = {}) {
     let value = String(input || "").trim().replaceAll("\\", "/");
     if (!value || value.includes("\0")) {
-      throw new PaperMDError(400, "INVALID_PATH", "A document path is required.");
+      throw new PageNestError(400, "INVALID_PATH", "A document path is required.");
     }
     if (path.posix.isAbsolute(value)) {
-      throw new PaperMDError(400, "INVALID_PATH", "Document paths must be relative.");
+      throw new PageNestError(400, "INVALID_PATH", "Document paths must be relative.");
     }
 
     value = path.posix.normalize(value.replace(/^\/+/, ""));
@@ -114,7 +114,7 @@ export class Library {
       value.startsWith("../") ||
       value.includes("/../")
     ) {
-      throw new PaperMDError(400, "INVALID_PATH", "Document path escapes the library root.");
+      throw new PageNestError(400, "INVALID_PATH", "Document path escapes the library root.");
     }
 
     const segments = value.split("/");
@@ -124,11 +124,11 @@ export class Library {
           !segment ||
           segment === "." ||
           segment === ".." ||
-          segment === ".papermd" ||
+          segment === ".pagenest" ||
           IGNORED_DIRECTORIES.has(segment),
       )
     ) {
-      throw new PaperMDError(400, "INVALID_PATH", "Document path is not allowed.");
+      throw new PageNestError(400, "INVALID_PATH", "Document path is not allowed.");
     }
 
     let extension = path.posix.extname(value).toLowerCase();
@@ -137,7 +137,7 @@ export class Library {
       extension = ".md";
     }
     if (!DOCUMENT_EXTENSIONS.has(extension)) {
-      throw new PaperMDError(400, "INVALID_PATH", "Only Markdown files are supported.");
+      throw new PageNestError(400, "INVALID_PATH", "Only Markdown files are supported.");
     }
     return value;
   }
@@ -146,7 +146,7 @@ export class Library {
     const normalized = this.normalizeDocumentPath(relativePath);
     const absolute = path.resolve(this.root, ...normalized.split("/"));
     if (absolute !== this.root && !absolute.startsWith(`${this.root}${path.sep}`)) {
-      throw new PaperMDError(400, "INVALID_PATH", "Document path escapes the library root.");
+      throw new PageNestError(400, "INVALID_PATH", "Document path escapes the library root.");
     }
     return absolute;
   }
@@ -154,12 +154,12 @@ export class Library {
   async assertSafeParent(filePath) {
     const parent = await fs.realpath(path.dirname(filePath)).catch((error) => {
       if (error.code === "ENOENT") {
-        throw new PaperMDError(400, "PARENT_NOT_FOUND", "The parent directory does not exist.");
+        throw new PageNestError(400, "PARENT_NOT_FOUND", "The parent directory does not exist.");
       }
       throw error;
     });
     if (parent !== this.root && !parent.startsWith(`${this.root}${path.sep}`)) {
-      throw new PaperMDError(400, "INVALID_PATH", "Document path escapes the library root.");
+      throw new PageNestError(400, "INVALID_PATH", "Document path escapes the library root.");
     }
   }
 
@@ -172,10 +172,10 @@ export class Library {
 
       for (const entry of entries) {
         if (files.length >= MAX_DOCUMENTS) {
-          throw new PaperMDError(
+          throw new PageNestError(
             500,
             "TOO_MANY_DOCUMENTS",
-            `PaperMD supports up to ${MAX_DOCUMENTS} Markdown files at a time.`,
+            `PageNest supports up to ${MAX_DOCUMENTS} Markdown files at a time.`,
           );
         }
         if (entry.isSymbolicLink()) continue;
@@ -224,14 +224,14 @@ export class Library {
   async requireDocument(id) {
     const document = await this.documentById(id);
     if (!document) {
-      throw new PaperMDError(404, "DOCUMENT_NOT_FOUND", "The document no longer exists.");
+      throw new PageNestError(404, "DOCUMENT_NOT_FOUND", "The document no longer exists.");
     }
     return document;
   }
 
   historyPath(docId) {
     if (!/^d-[a-f0-9]{20}$/.test(docId)) {
-      throw new PaperMDError(400, "INVALID_DOCUMENT_ID", "Invalid document id.");
+      throw new PageNestError(400, "INVALID_DOCUMENT_ID", "Invalid document id.");
     }
     return path.join(this.historyDirectory, docId);
   }
@@ -253,12 +253,12 @@ export class Library {
 
   async getVersion(docId, id) {
     if (!/^[\w.-]+$/.test(id)) {
-      throw new PaperMDError(400, "INVALID_VERSION_ID", "Invalid version id.");
+      throw new PageNestError(400, "INVALID_VERSION_ID", "Invalid version id.");
     }
     const summaries = await this.readHistoryIndex(docId);
     const summary = summaries.find((version) => version.id === id);
     if (!summary) {
-      throw new PaperMDError(404, "VERSION_NOT_FOUND", "The saved version was not found.");
+      throw new PageNestError(404, "VERSION_NOT_FOUND", "The saved version was not found.");
     }
     const markdown = await fs.readFile(path.join(this.historyPath(docId), `${id}.md`), "utf8");
     return { ...summary, markdown };
@@ -298,18 +298,18 @@ export class Library {
 
   async saveDocument(id, markdown, { baseHash, force = false, reason = "手动保存" } = {}) {
     if (typeof markdown !== "string") {
-      throw new PaperMDError(400, "INVALID_MARKDOWN", "Markdown content must be a string.");
+      throw new PageNestError(400, "INVALID_MARKDOWN", "Markdown content must be a string.");
     }
     const current = await this.requireDocument(id);
     if (!force && !baseHash) {
-      throw new PaperMDError(
+      throw new PageNestError(
         428,
         "BASE_HASH_REQUIRED",
         "Reload the document before saving because its base version is missing.",
       );
     }
     if (!force && baseHash !== current.hash) {
-      throw new PaperMDError(
+      throw new PageNestError(
         409,
         "DOCUMENT_CHANGED",
         "The file changed on disk after you opened it.",
@@ -350,7 +350,7 @@ export class Library {
 
     try {
       await fs.access(absolute);
-      throw new PaperMDError(409, "DOCUMENT_EXISTS", "A document already exists at this path.");
+      throw new PageNestError(409, "DOCUMENT_EXISTS", "A document already exists at this path.");
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }

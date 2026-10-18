@@ -3,12 +3,12 @@ import http from "node:http";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { Library, PaperMDError } from "./library.js";
+import { Library, PageNestError } from "./library.js";
 
 const SOURCE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_PUBLIC_DIRECTORY = path.resolve(SOURCE_DIRECTORY, "../public");
 const MAX_JSON_BYTES = 5 * 1024 * 1024;
-const TOKEN_COOKIE = "papermd_token";
+const TOKEN_COOKIE = "pagenest_token";
 
 const MIME_TYPES = new Map([
   [".css", "text/css; charset=utf-8"],
@@ -42,7 +42,7 @@ function sendText(response, status, value) {
 async function readJson(request) {
   const length = Number(request.headers["content-length"] || 0);
   if (length > MAX_JSON_BYTES) {
-    throw new PaperMDError(413, "BODY_TOO_LARGE", "Request body is too large.");
+    throw new PageNestError(413, "BODY_TOO_LARGE", "Request body is too large.");
   }
 
   const chunks = [];
@@ -50,7 +50,7 @@ async function readJson(request) {
   for await (const chunk of request) {
     total += chunk.length;
     if (total > MAX_JSON_BYTES) {
-      throw new PaperMDError(413, "BODY_TOO_LARGE", "Request body is too large.");
+      throw new PageNestError(413, "BODY_TOO_LARGE", "Request body is too large.");
     }
     chunks.push(chunk);
   }
@@ -59,7 +59,7 @@ async function readJson(request) {
   try {
     return JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } catch {
-    throw new PaperMDError(400, "INVALID_JSON", "Request body must be valid JSON.");
+    throw new PageNestError(400, "INVALID_JSON", "Request body must be valid JSON.");
   }
 }
 
@@ -98,7 +98,7 @@ function sameOrigin(request) {
 function isTokenAuthorized(request, url, token) {
   if (!token) return true;
   const queryToken = url.searchParams.get("token");
-  const headerToken = request.headers["x-papermd-token"];
+  const headerToken = request.headers["x-pagenest-token"];
   const storedToken = cookieValue(request, TOKEN_COOKIE);
   return queryToken === token || headerToken === token || storedToken === token;
 }
@@ -114,7 +114,7 @@ async function serveStatic(request, response, url, publicDirectory) {
   try {
     pathname = decodeURIComponent(pathname);
   } catch {
-    throw new PaperMDError(400, "INVALID_PATH", "Invalid URL path.");
+    throw new PageNestError(400, "INVALID_PATH", "Invalid URL path.");
   }
 
   if (pathname === "/") pathname = "/index.html";
@@ -123,7 +123,7 @@ async function serveStatic(request, response, url, publicDirectory) {
     absolute !== publicDirectory &&
     !absolute.startsWith(`${publicDirectory}${path.sep}`)
   ) {
-    throw new PaperMDError(403, "FORBIDDEN", "Static path is outside the public directory.");
+    throw new PageNestError(403, "FORBIDDEN", "Static path is outside the public directory.");
   }
 
   let content;
@@ -131,7 +131,7 @@ async function serveStatic(request, response, url, publicDirectory) {
     content = await fs.readFile(absolute);
   } catch (error) {
     if (error.code === "ENOENT" || error.code === "EISDIR") {
-      throw new PaperMDError(404, "NOT_FOUND", "Not found.");
+      throw new PageNestError(404, "NOT_FOUND", "Not found.");
     }
     throw error;
   }
@@ -205,7 +205,7 @@ function createEventsHub() {
   };
 }
 
-export async function createPaperMDServer({
+export async function createPageNestServer({
   root,
   token = "",
   publicDirectory = DEFAULT_PUBLIC_DIRECTORY,
@@ -222,10 +222,10 @@ export async function createPaperMDServer({
     try {
       const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
       if (!sameOrigin(request)) {
-        throw new PaperMDError(403, "INVALID_ORIGIN", "Cross-origin requests are not allowed.");
+        throw new PageNestError(403, "INVALID_ORIGIN", "Cross-origin requests are not allowed.");
       }
       if (!isTokenAuthorized(request, url, token)) {
-        throw new PaperMDError(401, "UNAUTHORIZED", "A valid PaperMD access token is required.");
+        throw new PageNestError(401, "UNAUTHORIZED", "A valid PageNest access token is required.");
       }
       if (token && url.searchParams.get("token") === token) {
         response.setHeader(
@@ -240,7 +240,7 @@ export async function createPaperMDServer({
       const route = apiRoute(url.pathname);
       if (!route) {
         if (!["GET", "HEAD"].includes(request.method)) {
-          throw new PaperMDError(405, "METHOD_NOT_ALLOWED", "Method not allowed.");
+          throw new PageNestError(405, "METHOD_NOT_ALLOWED", "Method not allowed.");
         }
         await serveStatic(request, response, url, publicRoot);
         return;
@@ -337,13 +337,13 @@ export async function createPaperMDServer({
         return;
       }
 
-      throw new PaperMDError(405, "METHOD_NOT_ALLOWED", "Method not allowed.");
+      throw new PageNestError(405, "METHOD_NOT_ALLOWED", "Method not allowed.");
     } catch (error) {
       const normalized =
-        error instanceof PaperMDError
+        error instanceof PageNestError
           ? error
-          : new PaperMDError(500, "INTERNAL_ERROR", "Unexpected server error.");
-      if (!(error instanceof PaperMDError)) {
+          : new PageNestError(500, "INTERNAL_ERROR", "Unexpected server error.");
+      if (!(error instanceof PageNestError)) {
         console.error(error);
       }
       if (!response.headersSent) {
@@ -363,8 +363,8 @@ export async function createPaperMDServer({
   return { server, library, publicDirectory: publicRoot };
 }
 
-export async function startPaperMDServer(options) {
-  const { server, library } = await createPaperMDServer(options);
+export async function startPageNestServer(options) {
+  const { server, library } = await createPageNestServer(options);
   const host = options.host || "127.0.0.1";
   const port = Number(options.port ?? 4321);
 

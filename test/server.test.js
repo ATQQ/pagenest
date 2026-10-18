@@ -4,10 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { createPaperMDServer } from "../src/server.js";
+import { createPageNestServer } from "../src/server.js";
 
 async function start(root, token = "") {
-  const app = await createPaperMDServer({ root, token });
+  const app = await createPageNestServer({ root, token });
   await new Promise((resolve, reject) => {
     app.server.once("error", reject);
     app.server.listen(0, "127.0.0.1", resolve);
@@ -17,7 +17,7 @@ async function start(root, token = "") {
 }
 
 test("serves bootstrap and saves a document through the API", async (t) => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "papermd-server-"));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "pagenest-server-"));
   await fs.writeFile(path.join(root, "README.md"), "# Home\n\nInitial.\n");
   const app = await start(root);
   t.after(async () => {
@@ -44,7 +44,7 @@ test("serves bootstrap and saves a document through the API", async (t) => {
 });
 
 test("requires the access token when configured", async (t) => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "papermd-token-"));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "pagenest-token-"));
   await fs.writeFile(path.join(root, "README.md"), "# Home\n");
   const app = await start(root, "secret-token");
   t.after(async () => {
@@ -56,7 +56,7 @@ test("requires the access token when configured", async (t) => {
   assert.equal(
     (
       await fetch(`${app.base}/api/health`, {
-        headers: { "x-papermd-token": "secret-token" },
+        headers: { "x-pagenest-token": "secret-token" },
       })
     ).status,
     200,
@@ -64,7 +64,7 @@ test("requires the access token when configured", async (t) => {
 });
 
 test("redirects a query token into an HttpOnly cookie", async (t) => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "papermd-cookie-"));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "pagenest-cookie-"));
   await fs.writeFile(path.join(root, "README.md"), "# Home\n");
   const app = await start(root, "secret-token");
   t.after(async () => {
@@ -88,7 +88,7 @@ test("redirects a query token into an HttpOnly cookie", async (t) => {
 });
 
 test("serves document details, history, and restores an earlier version", async (t) => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "papermd-history-"));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "pagenest-history-"));
   await fs.writeFile(path.join(root, "README.md"), "# Home\n\nFirst.\n");
   const app = await start(root);
   t.after(async () => {
@@ -137,7 +137,7 @@ test("serves document details, history, and restores an earlier version", async 
 });
 
 test("returns a usable empty bootstrap for a directory without Markdown", async (t) => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), "papermd-empty-"));
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "pagenest-empty-"));
   const app = await start(root);
   t.after(async () => {
     await new Promise((resolve) => app.server.close(resolve));

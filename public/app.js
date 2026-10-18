@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  const STORAGE_KEY = "papermd.ui.v1";
+  const STORAGE_KEY = "pagenest.ui.v1";
   const UI_STATE_VERSION = 1;
 
   const $ = (id) => document.getElementById(id);
@@ -275,7 +275,7 @@
     $("bootMessage").textContent =
       error instanceof ApiError && error.status === 401
         ? "访问令牌无效或已经失效，请重新打开 CLI 输出的地址。"
-        : error.message || "请确认 PaperMD 服务仍在运行。";
+        : error.message || "请确认 PageNest 服务仍在运行。";
   }
 
   const docById = (id) => state.docs.find((doc) => doc.id === id) || null;
@@ -1110,7 +1110,7 @@
     $("themeIcon").textContent = state.ui.theme === "night" ? "☀" : "☾";
     $("themeToggle").title = state.ui.theme === "night" ? "切换到纸质主题" : "切换到夜读主题";
     renderStarCount();
-    document.title = doc ? `${doc.title} · 纸页 PaperMD` : "纸页 PaperMD";
+    document.title = doc ? `${doc.title} · 页栖 PageNest` : "页栖 PageNest";
     updateSaveState();
   }
 
@@ -2465,7 +2465,7 @@
       try {
         handleExternalDocumentUpdate(JSON.parse(event.data));
       } catch (error) {
-        console.warn("Invalid PaperMD update event", error);
+        console.warn("Invalid PageNest update event", error);
       }
     });
     source.addEventListener("document-created", async () => {

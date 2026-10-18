@@ -1,8 +1,8 @@
-# PaperMD / 纸页
+# 页栖 PageNest
 
-PaperMD 是一个本地优先的 Markdown 工作台。运行一条命令，就能在浏览器中阅读、搜索、块级编辑并回溯指定目录下的 Markdown 文件。
+PageNest 是一个本地优先的 Markdown 工作台。运行一条命令，就能在浏览器中阅读、搜索、块级编辑并回溯指定目录下的 Markdown 文件。
 
-当前版本为 `0.1.0`，包名暂定 `papermd-studio`，CLI 命令为 `papermd`。
+当前版本为 `0.1.0`，npm 包名为 `pagenest`。安装后同时提供短命令 `pn` 和完整命令 `pagenest`。
 
 ## 功能
 
@@ -27,16 +27,16 @@ PaperMD 是一个本地优先的 Markdown 工作台。运行一条命令，就�
 直接从源码运行：
 
 ```bash
-cd papermd
-node ./bin/papermd.js /path/to/notes
+cd pagenest
+node ./bin/pagenest.js /path/to/notes
 ```
 
 在当前项目内建立全局命令：
 
 ```bash
-cd papermd
+cd pagenest
 npm link
-papermd /path/to/notes
+pn /path/to/notes
 ```
 
 默认打开 `http://127.0.0.1:4321/`。按 `Ctrl+C` 停止服务。
@@ -44,7 +44,8 @@ papermd /path/to/notes
 ## CLI
 
 ```text
-papermd [directory] [options]
+pn [directory] [options]
+pagenest [directory] [options]
 ```
 
 | 参数 | 说明 |
@@ -60,44 +61,44 @@ papermd [directory] [options]
 示例：
 
 ```bash
-papermd ./docs --port 8080 --no-open
-papermd ./notes --host 0.0.0.0
-papermd ./notes --token my-private-token
+pn ./docs --port 8080 --no-open
+pn ./notes --host 0.0.0.0
+pagenest ./notes --token my-private-token
 ```
 
 ## 局域网访问
 
-监听 `0.0.0.0`、`::` 或其他非 loopback 地址时，PaperMD 会自动生成访问令牌，并在终端打印带 token 的地址。浏览器首次打开该地址后，服务会写入 `HttpOnly`、`SameSite=Strict` Cookie，后续请求不需要在 URL 中重复携带 token。
+监听 `0.0.0.0`、`::` 或其他非 loopback 地址时，PageNest 会自动生成访问令牌，并在终端打印带 token 的地址。浏览器首次打开该地址后，服务会写入 `HttpOnly`、`SameSite=Strict` Cookie，后续请求不需要在 URL 中重复携带 token。
 
 ```bash
-papermd ./notes --host 0.0.0.0
+pn ./notes --host 0.0.0.0
 ```
 
 只在可信局域网中使用。访问令牌不能替代 HTTPS、系统防火墙或网络访问控制。
 
 ## 文件与历史
 
-Markdown 文件始终是正文内容的唯一数据源。PaperMD 不建立数据库。
+Markdown 文件始终是正文内容的唯一数据源。PageNest 不建立数据库。
 
 ```text
 your-notes/
 ├── README.md
 ├── guides/
 │   └── start.md
-└── .papermd/
+└── .pagenest/
     └── history/
         └── d-<document-id>/
             ├── index.json
             └── v-<version-id>.md
 ```
 
-- 保存前会把磁盘上的当前版本写入 `.papermd/history/`。
+- 保存前会把磁盘上的当前版本写入 `.pagenest/history/`。
 - 恢复历史版本前，会先为当前正文创建“恢复前自动存档”。
 - 每篇文档最多保留 200 个历史版本。
-- `.papermd/`、`.git/`、`node_modules/`、隐藏目录和符号链接不会出现在文档导航中。
+- `.pagenest/`、`.git/`、`node_modules/`、隐藏目录和符号链接不会出现在文档导航中。
 - 正文写入使用同目录临时文件加原子重命名，降低中断造成半写文件的风险。
 
-浏览器 `localStorage` 只保存 UI 状态、打开的标签、主题、收藏、导航模式和未保存草稿，键名为 `papermd.ui.v1`。重要的正文与历史数据都在磁盘上。
+浏览器 `localStorage` 只保存 UI 状态、打开的标签、主题、收藏、导航模式和未保存草稿，键名为 `pagenest.ui.v1`。重要的正文与历史数据都在磁盘上。
 
 ## 编辑与保存
 
@@ -131,7 +132,7 @@ your-notes/
 
 ```bash
 npm test
-node ./bin/papermd.js . --no-open
+node ./bin/pagenest.js . --no-open
 npm pack --dry-run
 ```
 
@@ -141,9 +142,9 @@ npm pack --dry-run
 
 - 没有真实身份系统、协同编辑和权限模型。
 - 没有文件监听器；外部改动通过保存冲突和 SSE 事件提示，而不是持续文件监视。
-- 版本历史依赖本地 `.papermd/`，不会自动同步或备份。
+- 版本历史依赖本地 `.pagenest/`，不会自动同步或备份。
 - 富文本编辑基于浏览器 `contenteditable`，复杂 Markdown 仍建议使用整篇源码模式。
-- npm 包名 `papermd` 已被占用，正式发布名称需要在发布阶段确认。
+- `pn` 是高频短命令，`pagenest` 是完整别名；两者行为完全一致。
 
 ## License
 
