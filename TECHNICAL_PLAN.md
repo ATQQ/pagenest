@@ -1,323 +1,351 @@
-# 页栖 PageNest 技术方案
+# 页栖 PageNest 0.2 技术方案
 
-## 1. 目标与边界
+## 1. 阶段目标
 
-PageNest 的目标是把任意本地 Markdown 目录转换成一个可直接分享使用的浏览器工作台：
+0.2 的核心任务是把可点击原型一次性升级为可发布、可测试、可持续演进的 TypeScript 工程，同时保持现有产品体验和磁盘兼容：
 
-```bash
-pn ~/notes
-```
+- 保持 `pn [directory]`、`pagenest [directory]`、缺省当前目录和既有忽略规则行为。
+- 保持 Markdown 为正文唯一数据源，不引入账号、数据库、云同步或多人协作。
+- 保持 `.pagenest/settings.json`、历史索引、历史文件与文件权限不被迁移破坏。
+- 完成 vanilla JS 到 React/Vite、JS 到 strict TypeScript 的单次切换。
+- 建立 lint、类型、单元、浏览器、构建和 npm 打包验收链路。
 
-首版聚焦单机、本地优先和个人使用，不引入账号、数据库、云同步或多人实时协作。
+技术方案不包含 npm 发布、远程仓库配置或公网托管。
 
-核心约束：
+## 2. 技术栈
 
-- Markdown 文件是正文的唯一数据源。
-- 零运行时依赖，降低安装、审计和分享成本。
-- 默认不暴露到局域网；显式监听非 loopback 地址时必须启用 token。
-- UI 可以保存在浏览器，正文和历史必须可落盘、可追溯。
-- 不实现重命名、移动和删除，缩小首版文件系统操作面。
+### 2.1 运行时
 
-## 2. 架构
+| 项目       | 选择                                  |
+| ---------- | ------------------------------------- |
+| Node.js    | `>=22.12.0`；CI 覆盖 22.12 与 24.x    |
+| 包管理     | npm + `package-lock.json`             |
+| 服务端     | Node 原生 `http`、`fs`、`crypto`、SSE |
+| 运行时依赖 | 0；前端依赖在构建时全部打包           |
+| 模块格式   | ESM                                   |
+
+服务端不引入 Express/Fastify，保持发布包轻量和 HTTP 行为可控。
+
+### 2.2 前端与工程
+
+| 类别       | 依赖                                                                            |
+| ---------- | ------------------------------------------------------------------------------- |
+| 框架       | React `19.3.1`、React DOM `19.3.1`                                              |
+| 构建       | Vite `8.3.4`、`@vitejs/plugin-react 6.1.2`                                      |
+| 语言       | TypeScript `6.0.3`                                                              |
+| 状态       | Zustand `5.0.15`                                                                |
+| 基础组件   | Radix Dialog、AlertDialog、Tabs、DropdownMenu、Tooltip、ScrollArea              |
+| 样式       | CSS Variables + CSS Modules，保留暖纸/夜读视觉                                  |
+| Markdown   | unified、remark-parse、remark-gfm、remark-rehype、rehype-react、rehype-sanitize |
+| 源码编辑器 | CodeMirror 6，动态导入                                                          |
+| Diff       | `diff 9.0.0`                                                                    |
+
+TypeScript 固定在 6.0.x，因为当前 `typescript-eslint 8.71.2` 尚不支持 TypeScript 7。升级 TS 前先确认 ESLint parser 的 peer range。
+
+不使用 Redux、TanStack Query、React Router、Tailwind 或 shadcn 默认主题。项目只有单工作区页面，路由和表单库不会带来足够收益。
+
+### 2.3 测试与质量
+
+- Vitest `5.0.5`、Testing Library React、jsdom
+- Playwright `1.64.1` + Chromium
+- `@axe-core/playwright`
+- ESLint `10.13.0`、Prettier `3.9.10`
+
+## 3. 工程结构
 
 ```text
-┌──────────────── Browser ────────────────┐
-│ public/index.html                       │
-│ public/style.css                        │
-│ public/app.js                           │
-│   ├─ UI state / drafts / favorites      │
-│   ├─ Markdown parser + block editor     │
-│   ├─ tabs / search / outline / history  │
-│   └─ fetch + EventSource                │
-└──────────────────┬──────────────────────┘
-                   │ HTTP / JSON / SSE
-┌──────────────────▼──────────────────────┐
-│ Node.js server                          │
-│ src/server.js                           │
-│   ├─ static files                       │
-│   ├─ API router                         │
-│   ├─ origin / token / security headers  │
-│   └─ SSE update hub                     │
-│ src/library.js                          │
-│   ├─ scan / path safety                 │
-│   ├─ .gitignore / persisted settings    │
-│   ├─ atomic write / hash check          │
-│   ├─ create / search                    │
-│   └─ snapshots / restore                │
-│ src/ignore.js                           │
-│   └─ Git-style matcher                  │
-│ src/cli.js                              │
-│   └─ args / host / token / browser      │
-└──────────────────┬──────────────────────┘
-                   │ fs
-┌──────────────────▼──────────────────────┐
-│ Markdown root/                          │
-│   *.md                                  │
-│   .pagenest/settings.json                │
-│   .pagenest/history/<docId>/             │
-└─────────────────────────────────────────┘
+pagenest/
+├── bin/pagenest.js           # 可执行入口，只调用 dist/cli
+├── src/
+│   ├── cli/index.ts          # 参数、host/port、token、浏览器
+│   ├── server/
+│   │   ├── ignore.ts         # Git-style 匹配器
+│   │   ├── library.ts        # 扫描、保存、历史、搜索
+│   │   └── server.ts         # HTTP、静态资源、API、SSE、安全头
+│   ├── shared/contracts.ts   # 前后端模型与事件类型
+│   └── client/
+│       ├── App.tsx
+│       ├── components/
+│       ├── markdown/
+│       ├── store/workspace.ts
+│       └── styles/
+├── test/
+│   ├── client/
+│   ├── e2e/
+│   └── fixtures/
+├── scripts/
+│   ├── dev.mjs
+│   └── e2e-server.mjs
+├── dist/client/              # Vite 产物
+├── dist/server/              # tsc 服务端产物
+└── dist/cli/                 # tsc CLI 产物
 ```
 
-## 3. 模块边界
+单 npm 包，不使用 monorepo。`package.json#exports` 指向 `dist/server/server.js`；发布包只包含 `bin`、`dist`、文档和 License。
 
-| 模块 | 职责 | 不负责 |
-| --- | --- | --- |
-| `bin/pagenest.js` | 进程入口、错误退出码 | 业务逻辑 |
-| `src/cli.js` | 参数解析、监听地址、token、打开浏览器 | 文件读写 |
-| `src/server.js` | HTTP、静态资源、API、SSE、安全响应头 | Markdown 语义 |
-| `src/library.js` | 目录扫描、路径安全、保存、历史、恢复、搜索 | 浏览器交互 |
-| `src/ignore.js` | `.gitignore` 子集和附加规则匹配 | 文件读写、UI |
-| `public/app.js` | 前端状态、Markdown 渲染、编辑、搜索、diff | 直接访问文件系统 |
-| `public/style.css` | 响应式布局和双主题 | 数据持久化 |
+## 4. 运行架构
 
-这样划分的关键目的，是让所有写入、快照和恢复行为集中在 `Library`，避免前端、HTTP 层和历史逻辑各自演化出不同的保存语义。
+```text
+Browser
+  React + Zustand + Radix
+  unified Markdown blocks / CodeMirror
+  fetch + EventSource
+        │ HTTP JSON + SSE
+        ▼
+Node native server
+  static dist/client
+  API router / origin / token / security headers
+  SSE hub
+        │
+        ▼
+Library
+  scan / ignore / path safety
+  atomic write / hash conflict check
+  create / search
+  history snapshot / restore
+        │
+        ▼
+Markdown root
+  *.md / *.markdown / *.mdown
+  .pagenest/settings.json
+  .pagenest/history/<docId>/
+```
 
-## 4. 文档与版本模型
+生产模式由同一个 Node 进程托管静态资源和 API。开发模式由 Vite HMR 服务客户端，Node 服务只处理 API，Vite 把 `/api` 与 `/api/events` 代理到 `4321`。
 
-服务端返回的文档：
+## 5. 前端状态模型
 
-```js
+Zustand 状态分为两层：
+
+### 5.1 服务端数据
+
+不持久化：
+
+```ts
 {
-  id: "d-<sha256(path).slice(0, 20)>",
-  path: "guides/start.md",
-  title: "开始使用",
-  markdown: "# 开始使用\n...",
-  updatedAt: 1760000000000,
-  size: 1234,
-  hash: "<sha256(markdown)>"
+  docs: Record<string, DocumentModel>;
+  docOrder: string[];
+  versions: Record<string, VersionSummary[]>;
+  rootName: string;
+  versionLimit: number;
+  settings: Settings;
+  ready: boolean;
+  loading: boolean;
+  error: string;
 }
 ```
 
-历史摘要：
+### 5.2 工作区状态
 
-```js
+持久化到 `localStorage["pagenest.ui.v2"]`：
+
+```ts
 {
-  id: "v-<time>-<random>",
-  docId: "d-...",
-  createdAt: 1760000000000,
-  reason: "保存前快照",
-  charDelta: 12,
-  hash: "<sha256(markdown)>",
-  size: 1246
-}
-```
-
-前端 UI 状态：
-
-```js
-{
-  version: 1,
-  tabs: [{ docId, dirty, scrollTop }],
-  activeDocId,
-  drafts: { [docId]: markdown },
-  favorites: { [docId]: [{ id, title, level, blockIndex }] },
+  tabs: [{ docId, scrollTop }];
+  activeDocId: string | null;
+  drafts: Record<string, string>;
+  favorites: Record<string, Favorite[]>;
   ui: {
-    theme: "paper",
-    sidebarCollapsed: false,
-    folders: [],
-    railTab: "outline",
-    navMode: "tree"
-  }
+    theme: "paper" | "night";
+    sidebarCollapsed: boolean;
+    folders: string[];
+    railTab: "outline" | "history";
+    navMode: "tree" | "list";
+  };
 }
 ```
 
-`localStorage["pagenest.ui.v1"]` 只用于阅读体验恢复。清除浏览器存储不会丢失正文或历史。
+标签脏状态不再保存为独立可变字段，而是由 `draft !== disk markdown` 推导。富文本、块源码、整篇源码和草稿恢复都必须经过 `setDraft`。
 
-## 5. HTTP API
+没有合法活动标签时，优先打开根目录 `README.md`（大小写不敏感），否则选择扫描结果第一篇。
 
-| Method | Path | 说明 |
-| --- | --- | --- |
-| `GET` | `/api/health` | 健康检查与根目录名 |
-| `GET` | `/api/bootstrap` | 文档、版本摘要、根目录信息 |
-| `GET` | `/api/settings` | 当前忽略规则与 `.gitignore` 状态 |
-| `PUT` | `/api/settings` | 保存页面忽略规则并重新扫描 |
-| `GET` | `/api/docs/:id` | 单篇文档与历史摘要 |
-| `POST` | `/api/docs` | 新建 Markdown |
-| `PUT` | `/api/docs/:id` | 保存正文 |
-| `GET` | `/api/docs/:id/versions` | 历史摘要列表 |
-| `GET` | `/api/docs/:id/versions/:versionId` | 单个历史版本正文 |
-| `POST` | `/api/docs/:id/versions/:versionId/restore` | 恢复历史版本 |
-| `GET` | `/api/search?q=` | 服务端全文检索 |
-| `GET` | `/api/events` | SSE 文档变更事件 |
+### 5.3 v1 迁移
 
-保存请求：
+1. 优先读取 `pagenest.ui.v2`。
+2. v2 不存在时读取 `pagenest.ui.v1`。
+3. 丢弃旧 `dirty` 字段，保留标签、滚动位置、草稿、收藏和 UI。
+4. 为旧收藏补齐 `line` 字段并为其他字段归一化。
+5. 成功写入 v2 后才停止读取 v1。
 
-```json
+迁移不会删除 v1，避免首次升级写入失败时丢失未保存内容。
+
+## 6. Markdown 阅读与编辑
+
+unified 管线把正文解析为带 source offset 的顶层块：
+
+```ts
 {
-  "markdown": "# Updated\n",
-  "baseHash": "<hash returned when opened>",
-  "force": false
+  id;
+  index;
+  kind;
+  markdown;
+  start;
+  end;
+  startLine;
+  endLine;
+  headingId?;
+  headingText?;
+  level?;
 }
 ```
 
-错误使用稳定结构：
+- 块编辑只替换对应 source range，未编辑内容不做格式化。
+- 标题、段落和引用使用 `contenteditable` 原地编辑，DOM 再转回 Markdown。
+- 列表、任务、表格、代码等无法稳定富文本化的块进入 Markdown 片段编辑。
+- 富文本失焦、`Esc` 或 `⌘/Ctrl+Enter` 都通过同一 commit 路径更新草稿。
+- 整篇源码模式只在开启时动态加载 CodeMirror，支持 Markdown 高亮、search、history 与 `⌘/Ctrl+S`。
+- `⌘/Ctrl+S` 会先提交当前活动块，再保存，避免编辑 DOM 与 Zustand 草稿短暂不一致。
+
+Markdown 渲染经过 `rehype-sanitize`。当前 GFM 范围不包括公式、Mermaid、内嵌 HTML 和插件。
+
+## 7. HTTP API 与事件
+
+| Method | Path                                        | 说明                             |
+| ------ | ------------------------------------------- | -------------------------------- |
+| `GET`  | `/api/health`                               | 健康检查与根目录名               |
+| `GET`  | `/api/bootstrap`                            | 文档、版本摘要、设置、根目录信息 |
+| `GET`  | `/api/settings`                             | 忽略规则与 `.gitignore` 状态     |
+| `PUT`  | `/api/settings`                             | 保存页面规则并重新扫描           |
+| `GET`  | `/api/docs`                                 | 文档列表                         |
+| `POST` | `/api/docs`                                 | 新建 Markdown                    |
+| `GET`  | `/api/docs/:id`                             | 单篇文档与历史摘要               |
+| `PUT`  | `/api/docs/:id`                             | 保存正文                         |
+| `GET`  | `/api/docs/:id/versions`                    | 历史摘要                         |
+| `GET`  | `/api/docs/:id/versions/:versionId`         | 历史正文                         |
+| `POST` | `/api/docs/:id/versions/:versionId/restore` | 恢复历史                         |
+| `GET`  | `/api/search?q=`                            | 服务端全文搜索                   |
+| `GET`  | `/api/events`                               | SSE                              |
+
+`/api/search` 在 0.2 增加 `snippet` 和 `line`，旧字段保持兼容。错误统一为：
 
 ```json
 {
   "error": {
     "code": "DOCUMENT_CHANGED",
     "message": "The file changed on disk after you opened it.",
-    "details": {
-      "current": { "...": "latest disk document" },
-      "versions": []
-    }
+    "details": {}
   }
 }
 ```
 
-## 6. 保存流程
+SSE 使用类型化事件：
+
+- `document-updated`
+- `document-created`
+- `settings-updated`
+
+当前文档存在草稿时，外部 `document-updated` 只显示提示，不覆盖草稿；没有草稿时刷新文档与版本。创建和设置事件触发 bootstrap 同步。
+
+## 8. 保存、历史与冲突
+
+保存流程：
 
 ```text
-browser PUT(markdown, baseHash)
-        │
-        ▼
-scan current file ── hash differs? ── yes ──► 409 + current disk doc
-        │ no
-        ▼
-content unchanged? ── yes ──► saved: false
-        │ no
-        ▼
-snapshot current disk markdown to .pagenest/history
-        │
-        ▼
-atomic write new markdown
-        │
-        ▼
-scan again, return new doc + versions
-        │
-        ▼
-SSE document-updated
+PUT(markdown, baseHash)
+  → 扫描当前磁盘正文
+  → 哈希不同：409 + 最新文档
+  → 内容未变：saved=false
+  → 保存磁盘旧正文为“保存前快照”
+  → 临时文件 + rename 原子写入
+  → 返回新文档与版本列表
+  → SSE document-updated
 ```
 
-冲突时的三个产品路径：
+冲突有三条路径：
 
-1. `保留本地`：强制覆盖磁盘，并在历史中记录“冲突：保留本地”。
-2. `加载对方`：丢弃当前草稿，重新读取磁盘版本。
-3. `查看差异`：对比磁盘版本与本地未保存正文。
+1. `加载对方`：丢弃当前草稿，载入磁盘版本。
+2. `查看差异`：左侧磁盘、右侧本地，移动端使用统一 diff。
+3. `保留本地`：带 `force` 强制保存，历史原因记录为“冲突：保留本地”。
 
-前端仍然先保存本地草稿，因此冲突弹层关闭、网络抖动或页面刷新不会直接丢失未保存内容。
+恢复历史版本前先创建“恢复前自动存档”。每篇最多 200 个版本，索引与正文分别原子写入；丢弃旧版本时只删除不再被索引引用的文件。
 
-## 7. 历史与恢复
+## 9. 导航、搜索与收藏
 
-- 保存前快照当前磁盘版本，而不是新正文。
-- 恢复版本前，先为当前正文创建“恢复前自动存档”。
-- 快照采用“索引 + 独立 Markdown 文件”，索引原子更新。
-- 每篇最多保留 200 个版本；超过后删除最旧的快照文件。
-- 相同正文且相同原因不会重复创建快照。
-- diff 在前端按行计算，桌面端并排展示，移动端展示统一 diff。
+- 左侧树形模式保留祖先分支和展开状态，列表模式平铺全部文档。
+- 左侧筛选只匹配标题和路径，不调用正文搜索。
+- 顶部搜索使用独立 Radix Dialog 和独立查询状态；服务端搜索，前端以 `AbortController` 取消旧请求。
+- 搜索结果打开或复用现有文档标签，并定位首次命中的块。
+- 收藏模型保存 `{ id, title, level, blockIndex, line }`，定位降级顺序为标题 ID、标题文本、块位置。
 
-该模型保证“当前正文 + 历史”始终能回到最近一次操作前，不依赖浏览器是否关闭。
+## 10. 响应式与可访问性
 
-## 8. 前端设计
+断点：
 
-前端保持无构建步骤：
+- `<768px`：目录抽屉、底部页面/历史抽屉、移动端源码快捷入口。
+- `768–1023px`：隐藏常驻右栏，改为底部抽屉。
+- `>=1024px`：左侧目录、正文、右侧本页目录/历史三栏。
 
-- `index.html` 提供语义结构、弹层和抽屉。
-- `style.css` 使用 CSS 变量控制纸质/夜读主题和响应式布局。
-- `app.js` 使用原生 DOM、Fetch 和 EventSource。
+弹窗使用 Radix 管理焦点、Esc、焦点回收和 modal 语义。交互目标保留移动端点击面积；隐藏文字使用可访问名称或视觉隐藏而不是简单移除语义。Playwright axe 检查目录、搜索、历史、冲突、忽略规则和响应式主界面。
 
-Markdown 被拆成可编辑块：标题、段落、列表、任务、引用、代码、表格和分隔线。每个块保留自己的 Markdown 源片段；编辑完成后由 DOM 转回 Markdown，再通过统一的 `setWorkingMarkdown` 入口更新草稿、标签脏状态和保存提示。
+## 11. 质量与发布
 
-状态更新原则：
-
-- 富文本编辑、源码编辑和草稿恢复都写入 `state.drafts`。
-- `dirty` 通过“工作区 Markdown 是否等于服务端 Markdown”推导。
-- 保存成功后统一替换服务端文档、版本列表和草稿状态。
-- 恢复成功后走与保存相同的替换入口，避免历史和阅读视图不一致。
-
-## 9. 搜索与导航
-
-- 左侧过滤只匹配文章标题和路径，保持导航用途。
-- 顶部搜索使用独立弹窗，匹配标题、路径和正文，并提供命中摘要。
-- 搜索结果复用已打开标签，否则创建新标签；打开后滚动到命中的块并高亮。
-- 目录树展开状态单独持久化；平铺列表不依赖目录展开状态。
-- 收藏保存章节标题和块位置；定位失败时提示章节已改名或被移除。
-
-## 10. 扫描范围与忽略规则
-
-扫描顺序固定为：
-
-```text
-hard ignore (.git/, .pagenest/, symlinks)
-        +
-root .gitignore
-        +
-.pagenest/settings.json
-        +
-CLI --ignore
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run test:e2e
+npm run pack:check
 ```
 
-- `.git/`、`.pagenest/` 和符号链接是应用安全边界，始终跳过。
-- 根目录 `.gitignore` 每次扫描时读取，因此外部修改无需重启服务。
-- 页面规则写入 `.pagenest/settings.json`；修改后通过 SSE 通知其他页面重新加载。
-- CLI `--ignore` 只注入当前进程，不写配置文件。
-- 匹配器支持注释、否定规则、根锚点、目录规则、`*`、`**`、`?`、字符类和常见 glob。
-- 正向目录规则命中后直接剪枝；否定规则按最后的匹配项覆盖之前的匹配。
-- 当前只读取根目录 `.gitignore`，不实现嵌套 `.gitignore`、全局 excludes 或完整 Git 语义。
+构建顺序：
 
-所有 Markdown 扫描和新建文档路径都会经过同一匹配器。被忽略的路径不能通过页面新建，避免文件写入后立即从工作区消失。
+1. 清理 `dist`。
+2. Vite 输出 `dist/client`。
+3. `tsc -p tsconfig.server.json` 输出 `dist/server` 与 `dist/cli`。
+4. npm 打包后用 tarball 在临时目录安装，真实运行 `pn --no-open` 验证扫描、打开、保存和 SSE。
 
-## 11. 安全模型
+CI 使用 Node 22.12 与 24.x 矩阵，执行相同质量链路。仓库保持独立 Git 历史，由维护者自行配置 remote 和推送。
 
-- 默认绑定 `127.0.0.1`。
-- 非 loopback 地址自动生成随机 token。
-- token 支持 URL 查询参数、`X-PageNest-Token` Header 和 HttpOnly Cookie；查询参数首次使用后重定向到不含 token 的 URL。
-- Cookie 使用 `SameSite=Strict`；跨站写请求还会被 Origin 校验拒绝。
-- 静态资源路径限制在 `public/`；文档路径限制在用户指定根目录。
-- 文档扫描始终跳过符号链接、`.git` 和 `.pagenest`；其余范围由显式忽略规则控制。
-- 正文写入使用原子替换，并保留原文件权限。
-- CSP 禁止外部脚本、外部样式和 frame 嵌入。
+## 12. 安全模型
 
-首版面向可信本地目录。若未来面向公网，需要增加 HTTPS 引导、正式身份认证、速率限制、审计日志和更严格的 CSRF/Origin 策略。
+- 默认只绑定 `127.0.0.1`。
+- 非 loopback 监听自动生成 token；支持 query、Header 和 HttpOnly/SameSite=Strict Cookie。
+- query token 首次访问后重定向到不含 token 的 URL。
+- 写请求拒绝跨站 Origin。
+- 静态资源限制在 `dist/client`，文档路径限制在用户根目录。
+- 扫描始终跳过符号链接、`.git` 和 `.pagenest`。
+- CSP 禁止外部脚本和外部样式；Markdown 经过 sanitize。
+- 正文写入保留原文件权限并使用原子 rename。
 
-## 12. 性能与规模
+页面访问令牌解决的是局域网误访问，不等同于正式身份系统。公网部署需要 HTTPS、身份、权限、速率限制与审计。
 
-- 单目录最多扫描 20,000 篇 Markdown。
-- 每次 bootstrap 读取所有文档正文和每篇历史索引，适合个人知识库，不适合超大 monorepo。
-- 正文按需打开；标签只保存 `docId`、脏状态和滚动位置。
-- 每篇历史顶部截断到 200 条，避免索引无限增长。
+## 13. 兼容边界
 
-后续若需要万篇以上规模，可增加启动索引缓存、按需读取正文、目录增量扫描和分页历史 API。
+- CLI 命令、参数、默认目录和 token 行为保持 0.1 兼容。
+- HTTP 路径、文档模型、版本模型和错误结构保持兼容；搜索只做字段增量。
+- `.pagenest/settings.json`、history 目录和 Markdown 文件格式不变。
+- 旧 `public/` 前端已删除，不长期维护双前端。
+- 浏览器存储从 v1 一次性迁移到 v2。
+- 升级不重写用户 Markdown、历史文件或权限。
 
-## 13. 测试策略
+## 14. 演进路线
 
-当前自动化覆盖：
+### 0.3 内容完整性
 
-- 目录扫描、忽略规则、标题推导和 ID 生成
-- `.gitignore`、页面持久化规则、CLI 规则的组合
-- 路径穿越和扩展名拒绝
-- 外部修改冲突
-- 原子保存、保存前快照和恢复
-- 新建嵌套文档
-- bootstrap、单篇读取、版本读取/恢复 API
-- token Header、query 重定向和 Cookie
-- 空目录 bootstrap
-- CLI 参数解析
-- `/api/settings` 读取、更新与扫描生效
+- 根目录范围内的只读附件和图片服务。
+- 相对图片、附件、Markdown 文档互链与锚点跳转。
+- 使用 chokidar 增加文件监听与增量扫描。
+- 补齐嵌套 `.gitignore` 语义。
 
-浏览器验收覆盖：
+### 0.4 规模与分享
 
-- `file://` 原型阶段已退出；正式版必须通过 HTTP 启动。
-- 桌面三栏、平板底部抽屉、移动端目录抽屉
-- 树形/列表切换、主题、搜索、收藏、草稿恢复
-- 块编辑、源码切换、快捷键保存
-- 历史 diff、恢复、真实磁盘冲突三条路径
-- 320/390/768/1024/1440 宽度与基本无障碍检查
+- bootstrap 拆分元数据与正文按需读取。
+- 持久索引、分页搜索和搜索排序。
+- 触发条件：超过约 5,000 篇文档或首屏正文读取超过 1.5 秒。
+- 只读静态导出/分享命令。
+- 评估 Node SEA 独立二进制。
 
-## 14. 已知限制与后续路线
+### 0.5 扩展性
 
-首版限制：
+- 在内容、资源和发布链路稳定后开放 math、Mermaid 等插件。
+- 新 API 优先以新增端点演进；破坏响应结构时使用 `/api/v2` 并保留至少一个 minor 版本的兼容入口。
 
-- 无文件系统 watcher，外部修改主要靠保存哈希和 SSE 获知。
-- 无多人协同、账号、权限、云同步。
-- 不处理相对图片、附件和跨文档链接解析。
-- 不读取嵌套 `.gitignore`，忽略匹配实现的是常用 Git-style 子集。
-- 富文本编辑适合常见 GFM；复杂结构建议源码模式。
+账号、云同步、CRDT、多人实时协作和公网托管不属于 0.2–0.4 范围。未来若引入，身份、权限与审计必须作为独立架构阶段处理。
 
-建议路线：
+## 15. 当前假设
 
-1. 增加根目录静态资源代理，支持相对图片和附件。
-2. 增加文件监听与增量索引。
-3. 增加文档内链接跳转、最近打开和全文搜索排序。
-4. 增加可选配置文件和端口自动避让。
-5. 评估多人协作时再引入身份、锁或 CRDT，不把协作复杂度提前塞进首版。
+- 截至 2026-10-18，npm 上 `pagenest` 尚未被占用；本阶段不执行发布。
+- 单工作区、单用户、本地可信目录是默认使用模型。
+- 大文件和多文档的高频全文搜索仍未建立磁盘索引；当前实现适合个人知识库。
+- CodeMirror 主包已动态拆分，但 React/unified 主 chunk 仍约 564 KB；在功能稳定前不为了体积牺牲编辑可靠性。
