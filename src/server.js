@@ -173,6 +173,7 @@ function apiRoute(pathname) {
   }
   if (pathname === "/api/docs") return { name: "documents" };
   if (pathname === "/api/bootstrap") return { name: "bootstrap" };
+  if (pathname === "/api/settings") return { name: "settings" };
   if (pathname === "/api/search") return { name: "search" };
   if (pathname === "/api/events") return { name: "events" };
   if (pathname === "/api/health") return { name: "health" };
@@ -208,9 +209,10 @@ function createEventsHub() {
 export async function createPageNestServer({
   root,
   token = "",
+  ignorePatterns = [],
   publicDirectory = DEFAULT_PUBLIC_DIRECTORY,
 }) {
-  const library = await Library.open(root);
+  const library = await Library.open(root, { ignorePatterns });
   const publicRoot = await fs.realpath(publicDirectory);
   const events = createEventsHub();
 
@@ -253,6 +255,19 @@ export async function createPageNestServer({
 
       if (route.name === "bootstrap" && request.method === "GET") {
         sendJson(response, 200, await library.bootstrap());
+        return;
+      }
+
+      if (route.name === "settings" && request.method === "GET") {
+        sendJson(response, 200, { settings: await library.getSettings() });
+        return;
+      }
+
+      if (route.name === "settings" && request.method === "PUT") {
+        const body = await readJson(request);
+        const settings = await library.updateIgnorePatterns(body.ignorePatterns);
+        events.broadcast("settings-updated", { settings });
+        sendJson(response, 200, { settings });
         return;
       }
 

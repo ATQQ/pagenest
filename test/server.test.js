@@ -6,8 +6,8 @@ import test from "node:test";
 
 import { createPageNestServer } from "../src/server.js";
 
-async function start(root, token = "") {
-  const app = await createPageNestServer({ root, token });
+async function start(root, token = "", options = {}) {
+  const app = await createPageNestServer({ root, token, ...options });
   await new Promise((resolve, reject) => {
     app.server.once("error", reject);
     app.server.listen(0, "127.0.0.1", resolve);
@@ -151,4 +151,68 @@ test("returns a usable empty bootstrap for a directory without Markdown", async 
   assert.deepEqual(bootstrap.documents, []);
   assert.deepEqual(bootstrap.versions, {});
   assert.equal(bootstrap.rootName, path.basename(root));
+});
+
+test("reads and updates ignore settings through the API", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "pagenest-settings-"));
+  await fs.mkdir(path.join(root, "private"), { recursive: true });
+  await fs.mkdir(path.join(root, "drafts"), { recursive: true });
+  await fs.writeFile(path.join(root, ".gitignore"), "private/\n");
+  await fs.writeFile(path.join(root, "README.md"), "# Home\n");
+  await fs.writeFile(path.join(root, "private", "secret.md"), "# Secret\n");
+  await fs.writeFile(path.join(root, "drafts", "idea.md"), "# Idea\n");
+  const app = await start(root);
+  t.after(async () => {
+    await new Promise((resolve) => app.server.close(resolve));
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  const initial = await fetch(`${app.base}/api/bootstrap`).then((response) =>
+    response.json(),
+  );
+  assert.deepEqual(
+    initial.documents.map((document) => document.path),
+    ["drafts/idea.md", "README.md"],
+  );
+  assert.equal(initial.settings.gitignore.exists, true);
+
+  const updated = await fetch(`${app.base}/api/settings`, {
+    method: "PUT",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ ignorePatterns: ["drafts/"] }),
+  }).then((response) => response.json());
+  assert.deepEqual(updated.settings.ignorePatterns, ["drafts/"]);
+
+  const bootstrap = await fetch(`${app.base}/api/bootstrap`).then((response) =>
+    response.json(),
+  );
+  assert.deepEqual(
+    bootstrap.documents.map((document) => document.path),
+    ["README.md"],
+  );
+  const stored = JSON.parse(
+    await fs.readFile(path.join(root, ".pagenest", "settings.json"), "utf8"),
+  );
+  assert.deepEqual(stored.ignorePatterns, ["drafts/"]);
+});
+
+test("applies CLI ignore rules to the server scan", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "pagenest-cli-ignore-"));
+  await fs.mkdir(path.join(root, "private"), { recursive: true });
+  await fs.writeFile(path.join(root, "README.md"), "# Home\n");
+  await fs.writeFile(path.join(root, "private", "secret.md"), "# Secret\n");
+  const app = await start(root, "", { ignorePatterns: ["private/"] });
+  t.after(async () => {
+    await new Promise((resolve) => app.server.close(resolve));
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  const bootstrap = await fetch(`${app.base}/api/bootstrap`).then((response) =>
+    response.json(),
+  );
+  assert.deepEqual(
+    bootstrap.documents.map((document) => document.path),
+    ["README.md"],
+  );
+  assert.deepEqual(bootstrap.settings.cliIgnorePatterns, ["private/"]);
 });

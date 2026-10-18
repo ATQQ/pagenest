@@ -104,3 +104,42 @@ test("creates nested Markdown documents", async (t) => {
   assert.match(await fs.readFile(path.join(root, "notes", "ideas.md"), "utf8"), /# Ideas/);
   assert.equal(created.versions[0].reason, "创建文档");
 });
+
+test("reuses .gitignore, persisted settings, and CLI ignore rules", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "pagenest-ignore-"));
+  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  await fs.mkdir(path.join(root, "private"), { recursive: true });
+  await fs.mkdir(path.join(root, "drafts"), { recursive: true });
+  await fs.mkdir(path.join(root, "guides"), { recursive: true });
+  await fs.mkdir(path.join(root, ".hidden"), { recursive: true });
+  await fs.mkdir(path.join(root, ".git"), { recursive: true });
+  await fs.writeFile(path.join(root, ".gitignore"), "private/\n*.draft.md\n");
+  await fs.writeFile(path.join(root, "public.md"), "# Public\n");
+  await fs.writeFile(path.join(root, "private", "secret.md"), "# Secret\n");
+  await fs.writeFile(path.join(root, "notes.draft.md"), "# Draft\n");
+  await fs.writeFile(path.join(root, "drafts", "idea.md"), "# Idea\n");
+  await fs.writeFile(path.join(root, "guides", "start.md"), "# Start\n");
+  await fs.writeFile(path.join(root, ".hidden", "visible.md"), "# Visible\n");
+  await fs.writeFile(path.join(root, ".git", "internal.md"), "# Internal\n");
+
+  const library = await Library.open(root, { ignorePatterns: ["guides/"] });
+  assert.deepEqual(
+    (await library.scanDocuments()).map((document) => document.path),
+    [".hidden/visible.md", "drafts/idea.md", "public.md"],
+  );
+
+  const settings = await library.updateIgnorePatterns(["drafts/"]);
+  assert.deepEqual(settings.ignorePatterns, ["drafts/"]);
+  assert.equal(settings.gitignore.exists, true);
+  assert.equal(settings.gitignore.ruleCount, 2);
+  assert.deepEqual(settings.cliIgnorePatterns, ["guides/"]);
+  assert.deepEqual(
+    (await library.scanDocuments()).map((document) => document.path),
+    [".hidden/visible.md", "public.md"],
+  );
+
+  await assert.rejects(
+    library.createDocument({ path: "drafts/new", title: "Blocked" }),
+    (error) => error instanceof PageNestError && error.code === "IGNORED_PATH",
+  );
+});

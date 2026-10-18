@@ -980,6 +980,16 @@ kbd {
   color: var(--accent);
 }
 
+.sidebar-foot-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 15px;
+}
+
+.sidebar-foot-actions .text-btn {
+  margin-top: 7px;
+}
+
 .drawer-scrim {
   position: fixed;
   inset: var(--topbar-h) 0 0;
@@ -2704,9 +2714,65 @@ kbd {
   font-size: 12px;
 }
 
-.field input:focus {
+.field textarea {
+  width: 100%;
+  min-height: 152px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: 0;
+  resize: vertical;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.65;
+}
+
+.field input:focus,
+.field textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.ignore-card {
+  width: min(560px, 100%);
+}
+
+.ignore-source {
+  margin-top: 14px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--paper-3) 56%, transparent);
+}
+
+.ignore-source strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.ignore-source p,
+.ignore-cli-note {
+  margin: 4px 0 0;
+  color: var(--ink-3);
+  font-size: 10.5px;
+  line-height: 1.6;
+}
+
+.ignore-card code {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--paper-3);
+  font-family: var(--mono);
+  font-size: 0.94em;
+}
+
+.ignore-cli-note:empty {
+  display: none;
 }
 
 .modal-tip {

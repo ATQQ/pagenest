@@ -22,10 +22,13 @@ const HELP = `PageNest / 页栖 ${packageVersion}
   -p, --port <number>   监听端口，默认 4321
       --host <host>     监听地址，默认 127.0.0.1
       --token [token]   启用访问令牌；非本机监听时自动启用
+  -i, --ignore <rule>   追加忽略规则，可重复；自动复用根目录 .gitignore
       --open            启动后打开浏览器（默认）
       --no-open         不打开浏览器
   -h, --help            显示帮助
   -v, --version         显示版本
+
+省略 directory 时，使用当前运行目录。
 
 示例:
   pn ./docs
@@ -49,6 +52,7 @@ function parseArguments(args) {
     open: true,
     token: "",
     tokenRequested: false,
+    ignorePatterns: [],
     help: false,
     version: false,
   };
@@ -84,6 +88,17 @@ function parseArguments(args) {
     if (argument === "--host") {
       options.host = takeValue(args, index, argument);
       index += 1;
+      continue;
+    }
+    if (argument === "-i" || argument === "--ignore") {
+      options.ignorePatterns.push(takeValue(args, index, argument));
+      index += 1;
+      continue;
+    }
+    if (argument.startsWith("--ignore=")) {
+      const value = argument.slice("--ignore=".length);
+      if (!value) throw new Error("--ignore requires a value.");
+      options.ignorePatterns.push(value);
       continue;
     }
     if (argument === "--token") {
@@ -176,7 +191,9 @@ export async function runCli(args) {
     host: options.host,
     port: options.port,
     token: options.token,
+    ignorePatterns: options.ignorePatterns,
   });
+  const settings = await library.getSettings();
 
   const port = typeof address === "object" ? address.port : options.port;
   const localUrl = `http://${displayHost(options.host)}:${port}/`;
@@ -193,6 +210,13 @@ export async function runCli(args) {
   console.log("  页栖 PageNest");
   console.log(`  目录  ${library.root}`);
   console.log(`  地址  ${accessUrl}`);
+  console.log(
+    `  忽略  ${
+      settings.gitignore.exists
+        ? `.gitignore ${settings.gitignore.ruleCount} 条`
+        : "未发现 .gitignore"
+    }${settings.cliIgnorePatterns.length ? ` · CLI ${settings.cliIgnorePatterns.length} 条` : ""}`,
+  );
   if (lanUrl) console.log(`  局域网 ${lanUrl}`);
   if (options.token) {
     console.log("  令牌已启用；打开上述带 token 的地址后，浏览器会自动写入安全 Cookie。");

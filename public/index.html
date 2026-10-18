@@ -138,7 +138,10 @@
             <span class="local-dot" aria-hidden="true"></span>
             <span id="serverRootLabel">本地服务 · 正在读取目录</span>
           </div>
-          <button class="text-btn" id="resetDemoBtn" type="button">重新扫描文件</button>
+          <div class="sidebar-foot-actions">
+            <button class="text-btn" id="ignoreSettingsBtn" type="button">忽略规则</button>
+            <button class="text-btn" id="rescanBtn" type="button">重新扫描</button>
+          </div>
         </div>
       </aside>
 
@@ -359,6 +362,36 @@
         <div class="modal-actions">
           <button class="ghost-btn" type="button" data-close-modal="newDocModal">取消</button>
           <button class="primary-btn" type="submit">创建并打开</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="modal-layer" id="ignoreModal" hidden>
+      <div class="modal-scrim" data-close-modal="ignoreModal"></div>
+      <form class="modal-card ignore-card" id="ignoreForm" role="dialog" aria-modal="true">
+        <div class="modal-eyebrow">Scan scope</div>
+        <h2>扫描与忽略</h2>
+        <div class="ignore-source">
+          <strong>.gitignore</strong>
+          <p id="ignoreGitignoreStatus">正在读取根目录规则…</p>
+        </div>
+        <label class="field">
+          <span>PageNest 附加忽略规则</span>
+          <textarea
+            id="ignorePatterns"
+            spellcheck="false"
+            placeholder="drafts/&#10;private/&#10;**/archive/"
+          ></textarea>
+        </label>
+        <p class="modal-tip">
+          每行一条 Git-style 规则；目录以 <code>/</code> 结尾。页面规则保存在
+          <code>.pagenest/settings.json</code>。
+        </p>
+        <p class="ignore-cli-note" id="ignoreCliStatus"></p>
+        <p class="modal-tip error" id="ignoreTip"></p>
+        <div class="modal-actions">
+          <button class="ghost-btn" type="button" data-close-modal="ignoreModal">取消</button>
+          <button class="primary-btn" type="submit">保存并重新扫描</button>
         </div>
       </form>
     </div>

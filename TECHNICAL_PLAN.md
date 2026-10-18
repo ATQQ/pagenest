@@ -40,9 +40,12 @@ pn ~/notes
 │   └─ SSE update hub                     │
 │ src/library.js                          │
 │   ├─ scan / path safety                 │
+│   ├─ .gitignore / persisted settings    │
 │   ├─ atomic write / hash check          │
 │   ├─ create / search                    │
 │   └─ snapshots / restore                │
+│ src/ignore.js                           │
+│   └─ Git-style matcher                  │
 │ src/cli.js                              │
 │   └─ args / host / token / browser      │
 └──────────────────┬──────────────────────┘
@@ -50,6 +53,7 @@ pn ~/notes
 ┌──────────────────▼──────────────────────┐
 │ Markdown root/                          │
 │   *.md                                  │
+│   .pagenest/settings.json                │
 │   .pagenest/history/<docId>/             │
 └─────────────────────────────────────────┘
 ```
@@ -62,6 +66,7 @@ pn ~/notes
 | `src/cli.js` | 参数解析、监听地址、token、打开浏览器 | 文件读写 |
 | `src/server.js` | HTTP、静态资源、API、SSE、安全响应头 | Markdown 语义 |
 | `src/library.js` | 目录扫描、路径安全、保存、历史、恢复、搜索 | 浏览器交互 |
+| `src/ignore.js` | `.gitignore` 子集和附加规则匹配 | 文件读写、UI |
 | `public/app.js` | 前端状态、Markdown 渲染、编辑、搜索、diff | 直接访问文件系统 |
 | `public/style.css` | 响应式布局和双主题 | 数据持久化 |
 
@@ -124,6 +129,8 @@ pn ~/notes
 | --- | --- | --- |
 | `GET` | `/api/health` | 健康检查与根目录名 |
 | `GET` | `/api/bootstrap` | 文档、版本摘要、根目录信息 |
+| `GET` | `/api/settings` | 当前忽略规则与 `.gitignore` 状态 |
+| `PUT` | `/api/settings` | 保存页面忽略规则并重新扫描 |
 | `GET` | `/api/docs/:id` | 单篇文档与历史摘要 |
 | `POST` | `/api/docs` | 新建 Markdown |
 | `PUT` | `/api/docs/:id` | 保存正文 |
@@ -226,20 +233,44 @@ Markdown 被拆成可编辑块：标题、段落、列表、任务、引用、�
 - 目录树展开状态单独持久化；平铺列表不依赖目录展开状态。
 - 收藏保存章节标题和块位置；定位失败时提示章节已改名或被移除。
 
-## 10. 安全模型
+## 10. 扫描范围与忽略规则
+
+扫描顺序固定为：
+
+```text
+hard ignore (.git/, .pagenest/, symlinks)
+        +
+root .gitignore
+        +
+.pagenest/settings.json
+        +
+CLI --ignore
+```
+
+- `.git/`、`.pagenest/` 和符号链接是应用安全边界，始终跳过。
+- 根目录 `.gitignore` 每次扫描时读取，因此外部修改无需重启服务。
+- 页面规则写入 `.pagenest/settings.json`；修改后通过 SSE 通知其他页面重新加载。
+- CLI `--ignore` 只注入当前进程，不写配置文件。
+- 匹配器支持注释、否定规则、根锚点、目录规则、`*`、`**`、`?`、字符类和常见 glob。
+- 正向目录规则命中后直接剪枝；否定规则按最后的匹配项覆盖之前的匹配。
+- 当前只读取根目录 `.gitignore`，不实现嵌套 `.gitignore`、全局 excludes 或完整 Git 语义。
+
+所有 Markdown 扫描和新建文档路径都会经过同一匹配器。被忽略的路径不能通过页面新建，避免文件写入后立即从工作区消失。
+
+## 11. 安全模型
 
 - 默认绑定 `127.0.0.1`。
 - 非 loopback 地址自动生成随机 token。
 - token 支持 URL 查询参数、`X-PageNest-Token` Header 和 HttpOnly Cookie；查询参数首次使用后重定向到不含 token 的 URL。
 - Cookie 使用 `SameSite=Strict`；跨站写请求还会被 Origin 校验拒绝。
 - 静态资源路径限制在 `public/`；文档路径限制在用户指定根目录。
-- 文档扫描跳过符号链接、隐藏目录、`.git`、`.pagenest` 和 `node_modules`。
+- 文档扫描始终跳过符号链接、`.git` 和 `.pagenest`；其余范围由显式忽略规则控制。
 - 正文写入使用原子替换，并保留原文件权限。
 - CSP 禁止外部脚本、外部样式和 frame 嵌入。
 
 首版面向可信本地目录。若未来面向公网，需要增加 HTTPS 引导、正式身份认证、速率限制、审计日志和更严格的 CSRF/Origin 策略。
 
-## 11. 性能与规模
+## 12. 性能与规模
 
 - 单目录最多扫描 20,000 篇 Markdown。
 - 每次 bootstrap 读取所有文档正文和每篇历史索引，适合个人知识库，不适合超大 monorepo。
@@ -248,11 +279,12 @@ Markdown 被拆成可编辑块：标题、段落、列表、任务、引用、�
 
 后续若需要万篇以上规模，可增加启动索引缓存、按需读取正文、目录增量扫描和分页历史 API。
 
-## 12. 测试策略
+## 13. 测试策略
 
 当前自动化覆盖：
 
 - 目录扫描、忽略规则、标题推导和 ID 生成
+- `.gitignore`、页面持久化规则、CLI 规则的组合
 - 路径穿越和扩展名拒绝
 - 外部修改冲突
 - 原子保存、保存前快照和恢复
@@ -261,6 +293,7 @@ Markdown 被拆成可编辑块：标题、段落、列表、任务、引用、�
 - token Header、query 重定向和 Cookie
 - 空目录 bootstrap
 - CLI 参数解析
+- `/api/settings` 读取、更新与扫描生效
 
 浏览器验收覆盖：
 
@@ -271,15 +304,15 @@ Markdown 被拆成可编辑块：标题、段落、列表、任务、引用、�
 - 历史 diff、恢复、真实磁盘冲突三条路径
 - 320/390/768/1024/1440 宽度与基本无障碍检查
 
-## 13. 已知限制与后续路线
+## 14. 已知限制与后续路线
 
 首版限制：
 
 - 无文件系统 watcher，外部修改主要靠保存哈希和 SSE 获知。
 - 无多人协同、账号、权限、云同步。
 - 不处理相对图片、附件和跨文档链接解析。
+- 不读取嵌套 `.gitignore`，忽略匹配实现的是常用 Git-style 子集。
 - 富文本编辑适合常见 GFM；复杂结构建议源码模式。
-- npm 包名 `pagenest`，同时注册 `pn` 与 `pagenest` 两个 bin。
 
 建议路线：
 

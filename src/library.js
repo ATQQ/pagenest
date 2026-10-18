@@ -2,8 +2,14 @@ import crypto from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 
+import {
+  createIgnoreMatcher,
+  normalizeIgnorePatterns,
+  parseIgnoreRules,
+} from "./ignore.js";
+
 const DOCUMENT_EXTENSIONS = new Set([".md", ".markdown", ".mdown"]);
-const IGNORED_DIRECTORIES = new Set([".git", ".pagenest", "node_modules"]);
+const HARD_IGNORED_DIRECTORIES = new Set([".git", ".pagenest"]);
 const VERSION_LIMIT = 200;
 const MAX_DOCUMENTS = 20_000;
 
@@ -83,19 +89,21 @@ async function atomicWrite(filePath, content) {
 }
 
 export class Library {
-  static async open(rootDirectory) {
+  static async open(rootDirectory, { ignorePatterns = [] } = {}) {
     const root = await fs.realpath(path.resolve(rootDirectory));
     const stat = await fs.stat(root);
     if (!stat.isDirectory()) {
       throw new PageNestError(400, "NOT_A_DIRECTORY", "The document root must be a directory.");
     }
-    return new Library(root);
+    return new Library(root, { ignorePatterns });
   }
 
-  constructor(root) {
+  constructor(root, { ignorePatterns = [] } = {}) {
     this.root = root;
     this.stateDirectory = path.join(root, ".pagenest");
     this.historyDirectory = path.join(this.stateDirectory, "history");
+    this.settingsPath = path.join(this.stateDirectory, "settings.json");
+    this.cliIgnorePatterns = normalizeIgnorePatterns(ignorePatterns);
   }
 
   normalizeDocumentPath(input, { appendExtension = false } = {}) {
@@ -124,8 +132,7 @@ export class Library {
           !segment ||
           segment === "." ||
           segment === ".." ||
-          segment === ".pagenest" ||
-          IGNORED_DIRECTORIES.has(segment),
+          HARD_IGNORED_DIRECTORIES.has(segment),
       )
     ) {
       throw new PageNestError(400, "INVALID_PATH", "Document path is not allowed.");
@@ -163,10 +170,86 @@ export class Library {
     }
   }
 
+  async readSettings() {
+    try {
+      const value = JSON.parse(await fs.readFile(this.settingsPath, "utf8"));
+      return {
+        version: 1,
+        ignorePatterns: normalizeIgnorePatterns(value?.ignorePatterns),
+      };
+    } catch (error) {
+      if (
+        error.code === "ENOENT" ||
+        error instanceof SyntaxError ||
+        error.message?.startsWith("Ignore patterns must") ||
+        error.message?.startsWith("At most")
+      ) {
+        return { version: 1, ignorePatterns: [] };
+      }
+      throw error;
+    }
+  }
+
+  async readGitignore() {
+    try {
+      const text = await fs.readFile(path.join(this.root, ".gitignore"), "utf8");
+      return { exists: true, text };
+    } catch (error) {
+      if (error.code === "ENOENT") return { exists: false, text: "" };
+      throw error;
+    }
+  }
+
+  async ignoreContext() {
+    const [settings, gitignore] = await Promise.all([
+      this.readSettings(),
+      this.readGitignore(),
+    ]);
+    const patterns = [...settings.ignorePatterns, ...this.cliIgnorePatterns];
+    return {
+      settings,
+      gitignore,
+      matcher: createIgnoreMatcher({
+        gitignoreText: gitignore.text,
+        patterns,
+      }),
+    };
+  }
+
+  async getSettings() {
+    const [settings, gitignore] = await Promise.all([
+      this.readSettings(),
+      this.readGitignore(),
+    ]);
+    return {
+      ignorePatterns: settings.ignorePatterns,
+      cliIgnorePatterns: this.cliIgnorePatterns,
+      gitignore: {
+        exists: gitignore.exists,
+        ruleCount: parseIgnoreRules(gitignore.text).length,
+      },
+    };
+  }
+
+  async updateIgnorePatterns(ignorePatterns) {
+    let normalized;
+    try {
+      normalized = normalizeIgnorePatterns(ignorePatterns);
+    } catch (error) {
+      throw new PageNestError(400, "INVALID_IGNORE_PATTERNS", error.message);
+    }
+    await atomicWrite(
+      this.settingsPath,
+      `${JSON.stringify({ version: 1, ignorePatterns: normalized }, null, 2)}\n`,
+    );
+    return this.getSettings();
+  }
+
   async scanDocuments() {
     const files = [];
+    const { matcher } = await this.ignoreContext();
 
-    const visit = async (directory) => {
+    const visit = async (directory, prefix = "") => {
       const entries = await fs.readdir(directory, { withFileTypes: true });
       entries.sort((a, b) => a.name.localeCompare(b.name, "en"));
 
@@ -181,14 +264,21 @@ export class Library {
         if (entry.isSymbolicLink()) continue;
 
         const absolute = path.join(directory, entry.name);
+        const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
         if (entry.isDirectory()) {
-          if (entry.name.startsWith(".") || IGNORED_DIRECTORIES.has(entry.name)) continue;
-          await visit(absolute);
+          if (
+            HARD_IGNORED_DIRECTORIES.has(entry.name) ||
+            matcher.canPruneDirectory(relativePath)
+          ) {
+            continue;
+          }
+          await visit(absolute, relativePath);
           continue;
         }
         if (!entry.isFile() || !DOCUMENT_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
           continue;
         }
+        if (matcher.isIgnored(relativePath)) continue;
         files.push(absolute);
       }
     };
@@ -347,6 +437,14 @@ export class Library {
   async createDocument({ path: requestedPath, title, markdown = "" }) {
     const relativePath = this.normalizeDocumentPath(requestedPath, { appendExtension: true });
     const absolute = this.absolutePath(relativePath);
+    const { matcher } = await this.ignoreContext();
+    if (matcher.isIgnored(relativePath)) {
+      throw new PageNestError(
+        400,
+        "IGNORED_PATH",
+        "该路径已被 .gitignore 或 PageNest 忽略规则排除。",
+      );
+    }
 
     try {
       await fs.access(absolute);
@@ -425,8 +523,15 @@ export class Library {
       versionLimit: VERSION_LIMIT,
       documents,
       versions,
+      settings: await this.getSettings(),
     };
   }
 }
 
-export { DOCUMENT_EXTENSIONS, MAX_DOCUMENTS, VERSION_LIMIT, isLoopbackHost };
+export {
+  DOCUMENT_EXTENSIONS,
+  HARD_IGNORED_DIRECTORIES,
+  MAX_DOCUMENTS,
+  VERSION_LIMIT,
+  isLoopbackHost,
+};

@@ -135,9 +135,18 @@
     conflictCurrent: null,
     lastSavedMarkdown: "",
     starsOpener: null,
+    settingsSaving: false,
     server: {
       rootName: "",
       versionLimit: 200,
+      settings: {
+        ignorePatterns: [],
+        cliIgnorePatterns: [],
+        gitignore: {
+          exists: false,
+          ruleCount: 0,
+        },
+      },
     },
     eventSource: null,
     ready: false,
@@ -230,6 +239,21 @@
     state.versions = data.versions && typeof data.versions === "object" ? data.versions : {};
     state.server.rootName = data.rootName || "";
     state.server.versionLimit = Number(data.versionLimit) || 200;
+    state.server.settings =
+      data.settings && typeof data.settings === "object"
+        ? {
+            ignorePatterns: Array.isArray(data.settings.ignorePatterns)
+              ? data.settings.ignorePatterns
+              : [],
+            cliIgnorePatterns: Array.isArray(data.settings.cliIgnorePatterns)
+              ? data.settings.cliIgnorePatterns
+              : [],
+            gitignore: {
+              exists: Boolean(data.settings.gitignore?.exists),
+              ruleCount: Number(data.settings.gitignore?.ruleCount) || 0,
+            },
+          }
+        : state.server.settings;
     $("serverRootLabel").textContent = `${state.server.rootName || "本地目录"} · ${state.docs.length} 篇 Markdown`;
 
     state.tabs = state.tabs.filter((tab) =>
@@ -2421,7 +2445,7 @@
   }
 
   async function rescanWorkspace() {
-    const button = $("resetDemoBtn");
+    const button = $("rescanBtn");
     button.disabled = true;
     button.textContent = "正在扫描…";
     try {
@@ -2431,7 +2455,53 @@
       showToast(error.message || "重新扫描失败");
     } finally {
       button.disabled = false;
-      button.textContent = "重新扫描文件";
+      button.textContent = "重新扫描";
+    }
+  }
+
+  function populateIgnoreModal() {
+    const settings = state.server.settings;
+    $("ignorePatterns").value = settings.ignorePatterns.join("\n");
+    $("ignoreTip").textContent = "";
+    $("ignoreGitignoreStatus").textContent = settings.gitignore.exists
+      ? `已自动读取根目录 .gitignore，共 ${settings.gitignore.ruleCount} 条有效规则。`
+      : "根目录没有 .gitignore；只使用 PageNest 附加规则。";
+    $("ignoreCliStatus").textContent = settings.cliIgnorePatterns.length
+      ? `本次 CLI 另外附加了 ${settings.cliIgnorePatterns.length} 条规则：${settings.cliIgnorePatterns.join("、")}`
+      : "";
+  }
+
+  function openIgnoreSettings() {
+    closeMobileSidebar();
+    populateIgnoreModal();
+    $("ignoreModal").hidden = false;
+    requestAnimationFrame(() => $("ignorePatterns").focus());
+  }
+
+  async function saveIgnoreSettings(event) {
+    event.preventDefault();
+    const submit = event.currentTarget.querySelector('button[type="submit"]');
+    const patterns = $("ignorePatterns").value.split(/\r?\n/);
+    state.settingsSaving = true;
+    submit.disabled = true;
+    submit.textContent = "保存中…";
+    $("ignoreTip").textContent = "";
+
+    try {
+      const result = await apiRequest("/api/settings", {
+        method: "PUT",
+        body: { ignorePatterns: patterns },
+      });
+      state.server.settings = result.settings;
+      await loadFromServer();
+      closeModal("ignoreModal");
+      showToast(`忽略规则已更新 · ${state.docs.length} 篇 Markdown`);
+    } catch (error) {
+      $("ignoreTip").textContent = error.message || "保存忽略规则失败";
+    } finally {
+      state.settingsSaving = false;
+      submit.disabled = false;
+      submit.textContent = "保存并重新扫描";
     }
   }
 
@@ -2474,6 +2544,16 @@
         showToast("检测到新文档");
       } catch (error) {
         showToast(error.message || "同步新文档失败");
+      }
+    });
+    source.addEventListener("settings-updated", async () => {
+      if (state.settingsSaving) return;
+      try {
+        await loadFromServer();
+        if (!$("ignoreModal").hidden) populateIgnoreModal();
+        showToast("忽略规则已在另一个页面更新");
+      } catch (error) {
+        showToast(error.message || "同步忽略规则失败");
       }
     });
   }
@@ -2584,7 +2664,9 @@
     $("sourceToggle").addEventListener("click", toggleSourceMode);
     $("saveBtn").addEventListener("click", saveActiveDocument);
     $("themeToggle").addEventListener("click", toggleTheme);
-    $("resetDemoBtn").addEventListener("click", rescanWorkspace);
+    $("rescanBtn").addEventListener("click", rescanWorkspace);
+    $("ignoreSettingsBtn").addEventListener("click", openIgnoreSettings);
+    $("ignoreForm").addEventListener("submit", saveIgnoreSettings);
     $("starsBtn").addEventListener("click", openFavoritesPanel);
     $("starsClose").addEventListener("click", () => closeFavoritesPanel());
     $("starsScrim").addEventListener("click", () => closeFavoritesPanel());
@@ -2827,9 +2909,13 @@
           closeGlobalSearch();
           return;
         }
-        const openModal = ["conflictModal", "diffModal", "choiceModal", "newDocModal"].find(
-          (id) => !$(id).hidden,
-        );
+        const openModal = [
+          "conflictModal",
+          "diffModal",
+          "choiceModal",
+          "newDocModal",
+          "ignoreModal",
+        ].find((id) => !$(id).hidden);
         if (openModal) {
           closeModal(openModal);
           return;

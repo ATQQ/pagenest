@@ -7,6 +7,7 @@ PageNest 是一个本地优先的 Markdown 工作台。运行一条命令，就�
 ## 功能
 
 - 递归扫描 `.md`、`.markdown`、`.mdown`
+- 自动复用根目录 `.gitignore`，并支持 CLI/页面追加忽略规则
 - 树形目录与平铺列表两种导航方式，支持标题/路径过滤
 - 全文档搜索弹窗，支持标题、路径和正文命中
 - 多文档标签、草稿恢复、未保存提示
@@ -39,6 +40,13 @@ npm link
 pn /path/to/notes
 ```
 
+不传目录时直接使用当前运行目录：
+
+```bash
+cd /path/to/notes
+pn
+```
+
 默认打开 `http://127.0.0.1:4321/`。按 `Ctrl+C` 停止服务。
 
 ## CLI
@@ -53,6 +61,7 @@ pagenest [directory] [options]
 | `-p, --port <number>` | 监听端口，默认 `4321`；`0` 表示由系统分配 |
 | `--host <host>` | 监听地址，默认 `127.0.0.1` |
 | `--token [token]` | 启用访问令牌；非本机监听时自动生成 |
+| `-i, --ignore <rule>` | 追加一条 Git-style 忽略规则，可重复 |
 | `--open` | 启动后打开浏览器，默认开启 |
 | `--no-open` | 不自动打开浏览器 |
 | `-h, --help` | 显示帮助 |
@@ -63,8 +72,33 @@ pagenest [directory] [options]
 ```bash
 pn ./docs --port 8080 --no-open
 pn ./notes --host 0.0.0.0
+pn ./notes --ignore drafts/ --ignore "**/archive/"
 pagenest ./notes --token my-private-token
 ```
+
+## 扫描范围与忽略
+
+PageNest 按以下顺序组合扫描规则：
+
+1. 始终跳过 `.git/`、`.pagenest/` 和符号链接。
+2. 如果根目录存在 `.gitignore`，自动读取并复用。
+3. 叠加 CLI `--ignore` 规则和页面“忽略规则”中保存的规则。
+
+页面规则保存在 `.pagenest/settings.json`，修改后会立即重新扫描。CLI 规则只对本次运行生效。
+
+支持常用 Git-style 语法：
+
+```gitignore
+node_modules/
+private/
+*.draft.md
+/root-only/
+docs/*
+!docs/keep.md
+**/archive/
+```
+
+首版只读取根目录 `.gitignore`，不读取嵌套 `.gitignore` 或全局 Git ignore 配置。
 
 ## 局域网访问
 
@@ -86,6 +120,7 @@ your-notes/
 ├── guides/
 │   └── start.md
 └── .pagenest/
+    ├── settings.json
     └── history/
         └── d-<document-id>/
             ├── index.json
@@ -95,7 +130,7 @@ your-notes/
 - 保存前会把磁盘上的当前版本写入 `.pagenest/history/`。
 - 恢复历史版本前，会先为当前正文创建“恢复前自动存档”。
 - 每篇文档最多保留 200 个历史版本。
-- `.pagenest/`、`.git/`、`node_modules/`、隐藏目录和符号链接不会出现在文档导航中。
+- `.pagenest/`、`.git/` 和符号链接始终跳过；其他目录由 `.gitignore` 与附加规则决定。
 - 正文写入使用同目录临时文件加原子重命名，降低中断造成半写文件的风险。
 
 浏览器 `localStorage` 只保存 UI 状态、打开的标签、主题、收藏、导航模式和未保存草稿，键名为 `pagenest.ui.v1`。重要的正文与历史数据都在磁盘上。
@@ -144,6 +179,7 @@ npm pack --dry-run
 - 没有文件监听器；外部改动通过保存冲突和 SSE 事件提示，而不是持续文件监视。
 - 版本历史依赖本地 `.pagenest/`，不会自动同步或备份。
 - 富文本编辑基于浏览器 `contenteditable`，复杂 Markdown 仍建议使用整篇源码模式。
+- `.gitignore` 只复用根目录文件，且实现的是常用子集，不等同于完整 Git ignore 语义。
 - `pn` 是高频短命令，`pagenest` 是完整别名；两者行为完全一致。
 
 ## License

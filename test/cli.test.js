@@ -32,6 +32,19 @@ test("parses directory, port, host, and browser options", () => {
   assert.equal(options.token, "");
 });
 
+test("defaults to the current directory and collects repeatable ignores", () => {
+  const options = parseArguments([
+    "--ignore",
+    "drafts/",
+    "-i",
+    "**/archive/",
+    "--ignore=private/",
+  ]);
+
+  assert.equal(options.directory, "");
+  assert.deepEqual(options.ignorePatterns, ["drafts/", "**/archive/", "private/"]);
+});
+
 test("automatically creates a token for a non-loopback host", () => {
   const options = parseArguments(["./notes", "--host", "0.0.0.0"]);
 
@@ -48,4 +61,5 @@ test("accepts explicit and inline tokens", () => {
 test("rejects invalid ports and multiple directories", () => {
   assert.throws(() => parseArguments(["--port", "70000"]), /Port must be/);
   assert.throws(() => parseArguments(["one", "two"]), /Only one document directory/);
+  assert.throws(() => parseArguments(["--ignore="]), /requires a value/);
 });
