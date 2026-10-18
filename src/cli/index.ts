@@ -4,11 +4,23 @@ import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 
-import { startPageNestServer } from "./server.js";
-import { isLoopbackHost } from "./library.js";
+import { startPageNestServer } from "../server/server.js";
+import { isLoopbackHost } from "../server/library.js";
 
 const require = createRequire(import.meta.url);
-const { version: packageVersion } = require("../package.json");
+const { version: packageVersion } = require("../../package.json") as { version: string };
+
+export interface CliOptions {
+  directory: string;
+  host: string;
+  port: number;
+  open: boolean;
+  token: string;
+  tokenRequested: boolean;
+  ignorePatterns: string[];
+  help: boolean;
+  version: boolean;
+}
 
 const HELP = `PageNest / 页栖 ${packageVersion}
 
@@ -36,7 +48,7 @@ const HELP = `PageNest / 页栖 ${packageVersion}
   pagenest ./notes --host 0.0.0.0
 `;
 
-function takeValue(args, index, option) {
+function takeValue(args: readonly string[], index: number, option: string): string {
   const value = args[index + 1];
   if (!value || value.startsWith("-")) {
     throw new Error(`${option} requires a value.`);
@@ -44,8 +56,8 @@ function takeValue(args, index, option) {
   return value;
 }
 
-function parseArguments(args) {
-  const options = {
+export function parseArguments(args: readonly string[]): CliOptions {
+  const options: CliOptions = {
     directory: "",
     host: "127.0.0.1",
     port: 4321,
@@ -58,7 +70,7 @@ function parseArguments(args) {
   };
 
   for (let index = 0; index < args.length; index += 1) {
-    const argument = args[index];
+    const argument = args[index]!;
     if (argument === "-h" || argument === "--help") {
       options.help = true;
       continue;
@@ -135,7 +147,7 @@ function parseArguments(args) {
   return options;
 }
 
-function networkAddress(host) {
+function networkAddress(host: string): string {
   if (host === "0.0.0.0" || host === "::") {
     for (const interfaces of Object.values(os.networkInterfaces())) {
       for (const entry of interfaces || []) {
@@ -146,15 +158,15 @@ function networkAddress(host) {
   return host;
 }
 
-function displayHost(host) {
+function displayHost(host: string): string {
   if (host === "0.0.0.0" || host === "::") return "127.0.0.1";
   if (host === "::1") return "[::1]";
   return host;
 }
 
-function openBrowser(url) {
-  let command;
-  let args;
+function openBrowser(url: string): void {
+  let command: string;
+  let args: string[];
   if (process.platform === "darwin") {
     command = "open";
     args = [url];
@@ -174,7 +186,7 @@ function openBrowser(url) {
   }
 }
 
-export async function runCli(args) {
+export async function runCli(args: readonly string[]): Promise<void> {
   const options = parseArguments(args);
   if (options.help) {
     console.log(HELP.trimEnd());
@@ -195,7 +207,7 @@ export async function runCli(args) {
   });
   const settings = await library.getSettings();
 
-  const port = typeof address === "object" ? address.port : options.port;
+  const port = typeof address === "object" && address ? address.port : options.port;
   const localUrl = `http://${displayHost(options.host)}:${port}/`;
   const accessUrl = options.token
     ? `${localUrl}?token=${encodeURIComponent(options.token)}`
@@ -226,7 +238,7 @@ export async function runCli(args) {
 
   if (options.open) openBrowser(accessUrl);
 
-  await new Promise((resolve) => {
+  await new Promise<void>((resolve) => {
     let stopping = false;
     const stop = () => {
       if (stopping) return;
@@ -241,5 +253,3 @@ export async function runCli(args) {
     process.once("SIGTERM", stop);
   });
 }
-
-export { parseArguments };

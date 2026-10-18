@@ -1,18 +1,30 @@
 const MAX_IGNORE_PATTERNS = 500;
 const MAX_IGNORE_PATTERN_LENGTH = 300;
 
-function escapeRegExp(value) {
+export interface IgnoreRule {
+  negated: boolean;
+  directoryOnly: boolean;
+  matchBasename: boolean;
+  regex: RegExp;
+}
+
+export interface CreateIgnoreMatcherOptions {
+  gitignoreText?: string;
+  patterns?: unknown;
+}
+
+function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function globToRegExp(pattern) {
+function globToRegExp(pattern: string): RegExp {
   let source = "^";
 
   for (let index = 0; index < pattern.length; index += 1) {
-    const character = pattern[index];
+    const character = pattern[index]!;
 
     if (character === "\\" && index + 1 < pattern.length) {
-      source += escapeRegExp(pattern[index + 1]);
+      source += escapeRegExp(pattern[index + 1]!);
       index += 1;
       continue;
     }
@@ -56,7 +68,7 @@ function globToRegExp(pattern) {
   return new RegExp(`${source}$`);
 }
 
-function prepareLine(value) {
+function prepareLine(value: string): string {
   let line = String(value).replace(/\r$/, "").trim();
   if (!line || line.startsWith("#")) return "";
 
@@ -64,12 +76,12 @@ function prepareLine(value) {
   return line;
 }
 
-export function normalizeIgnorePatterns(input) {
+export function normalizeIgnorePatterns(input: unknown): string[] {
   if (!Array.isArray(input)) return [];
-  const patterns = [];
-  const seen = new Set();
+  const patterns: string[] = [];
+  const seen = new Set<string>();
 
-  for (const item of input) {
+  for (const item of input as unknown[]) {
     const lines = String(item).replace(/\r\n?/g, "\n").split("\n");
     for (const rawLine of lines) {
       const line = prepareLine(rawLine);
@@ -89,10 +101,12 @@ export function normalizeIgnorePatterns(input) {
   return patterns;
 }
 
-export function parseIgnoreRules(text) {
-  const rules = [];
+export function parseIgnoreRules(text: string | null | undefined): IgnoreRule[] {
+  const rules: IgnoreRule[] = [];
 
-  for (const item of String(text || "").replace(/\r\n?/g, "\n").split("\n")) {
+  for (const item of String(text || "")
+    .replace(/\r\n?/g, "\n")
+    .split("\n")) {
     let line = prepareLine(item);
     if (!line) continue;
 
@@ -125,11 +139,14 @@ export function parseIgnoreRules(text) {
   return rules;
 }
 
-export function createIgnoreMatcher({ gitignoreText = "", patterns = [] } = {}) {
+export function createIgnoreMatcher({
+  gitignoreText = "",
+  patterns = [],
+}: CreateIgnoreMatcherOptions = {}) {
   const normalized = normalizeIgnorePatterns(patterns);
   const rules = parseIgnoreRules([gitignoreText, ...normalized].join("\n"));
 
-  function matchesExact(relativePath, isDirectory) {
+  function matchesExact(relativePath: string, isDirectory: boolean): boolean {
     let ignored = false;
     const basename = relativePath.split("/").pop() || relativePath;
 
@@ -142,7 +159,10 @@ export function createIgnoreMatcher({ gitignoreText = "", patterns = [] } = {}) 
     return ignored;
   }
 
-  function isIgnored(relativePath, { isDirectory = false } = {}) {
+  function isIgnored(
+    relativePath: string,
+    { isDirectory = false }: { isDirectory?: boolean } = {},
+  ): boolean {
     const normalizedPath = String(relativePath || "")
       .replaceAll("\\", "/")
       .replace(/^\/+|\/+$/g, "");
@@ -158,11 +178,8 @@ export function createIgnoreMatcher({ gitignoreText = "", patterns = [] } = {}) 
   return {
     rules,
     isIgnored,
-    canPruneDirectory: (relativePath) => isIgnored(relativePath, { isDirectory: true }),
+    canPruneDirectory: (relativePath: string) => isIgnored(relativePath, { isDirectory: true }),
   };
 }
 
-export {
-  MAX_IGNORE_PATTERN_LENGTH,
-  MAX_IGNORE_PATTERNS,
-};
+export { MAX_IGNORE_PATTERN_LENGTH, MAX_IGNORE_PATTERNS };

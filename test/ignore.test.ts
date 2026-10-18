@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import test from "node:test";
+import { test } from "vitest";
 
 import {
   createIgnoreMatcher,
   normalizeIgnorePatterns,
   parseIgnoreRules,
-} from "../src/ignore.js";
+} from "../src/server/ignore.js";
 
 test("matches common gitignore directory, glob, and negation rules", () => {
   const matcher = createIgnoreMatcher({
@@ -41,9 +41,9 @@ test("directory-only rules do not hide same-named files", () => {
 });
 
 test("normalizes comments and duplicate custom rules", () => {
-  assert.deepEqual(
-    normalizeIgnorePatterns(["drafts/\n# comment\nprivate/", "drafts/", ""]),
-    ["drafts/", "private/"],
-  );
+  assert.deepEqual(normalizeIgnorePatterns(["drafts/\n# comment\nprivate/", "drafts/", ""]), [
+    "drafts/",
+    "private/",
+  ]);
   assert.equal(parseIgnoreRules("# comment\ndrafts/\n").length, 1);
 });

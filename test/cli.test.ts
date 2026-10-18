@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import test from "node:test";
+import { test } from "vitest";
 
-import { parseArguments } from "../src/cli.js";
+import { parseArguments } from "../src/cli/index.js";
 
 test("registers both the short and descriptive CLI commands", () => {
   const packageJson = JSON.parse(
@@ -16,14 +16,7 @@ test("registers both the short and descriptive CLI commands", () => {
 });
 
 test("parses directory, port, host, and browser options", () => {
-  const options = parseArguments([
-    "./docs",
-    "--port",
-    "8080",
-    "--host",
-    "127.0.0.1",
-    "--no-open",
-  ]);
+  const options = parseArguments(["./docs", "--port", "8080", "--host", "127.0.0.1", "--no-open"]);
 
   assert.equal(options.directory, "./docs");
   assert.equal(options.port, 8080);
@@ -33,13 +26,7 @@ test("parses directory, port, host, and browser options", () => {
 });
 
 test("defaults to the current directory and collects repeatable ignores", () => {
-  const options = parseArguments([
-    "--ignore",
-    "drafts/",
-    "-i",
-    "**/archive/",
-    "--ignore=private/",
-  ]);
+  const options = parseArguments(["--ignore", "drafts/", "-i", "**/archive/", "--ignore=private/"]);
 
   assert.equal(options.directory, "");
   assert.deepEqual(options.ignorePatterns, ["drafts/", "**/archive/", "private/"]);

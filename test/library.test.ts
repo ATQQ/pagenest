@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import test from "node:test";
+import { test } from "vitest";
 
-import { Library, PageNestError } from "../src/library.js";
+import { Library, PageNestError } from "../src/server/library.js";
 
 async function fixture() {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "pagenest-library-"));
@@ -17,7 +17,7 @@ async function fixture() {
 
 test("scans Markdown files and ignores non-document paths", async (t) => {
   const root = await fixture();
-  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  t.onTestFinished(() => fs.rm(root, { recursive: true, force: true }));
   const library = await Library.open(root);
   const documents = await library.scanDocuments();
 
@@ -25,13 +25,13 @@ test("scans Markdown files and ignores non-document paths", async (t) => {
     documents.map((document) => document.path),
     ["guides/start.md", "README.md"],
   );
-  assert.equal(documents[1].title, "Home");
-  assert.match(documents[1].id, /^d-[a-f0-9]{20}$/);
+  assert.equal(documents[1]!.title, "Home");
+  assert.match(documents[1]!.id, /^d-[a-f0-9]{20}$/);
 });
 
 test("rejects path traversal and unsupported extensions", async (t) => {
   const root = await fixture();
-  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  t.onTestFinished(() => fs.rm(root, { recursive: true, force: true }));
   const library = await Library.open(root);
 
   assert.throws(
@@ -50,9 +50,9 @@ test("rejects path traversal and unsupported extensions", async (t) => {
 
 test("detects external changes and refuses a stale save", async (t) => {
   const root = await fixture();
-  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  t.onTestFinished(() => fs.rm(root, { recursive: true, force: true }));
   const library = await Library.open(root);
-  const document = (await library.scanDocuments()).find((item) => item.path === "README.md");
+  const document = (await library.scanDocuments()).find((item) => item.path === "README.md")!;
   const absolute = path.join(root, document.path);
 
   await fs.writeFile(absolute, "# Home\n\nChanged elsewhere.\n");
@@ -60,19 +60,20 @@ test("detects external changes and refuses a stale save", async (t) => {
     library.saveDocument(document.id, "# Home\n\nMy local edit.\n", {
       baseHash: document.hash,
     }),
-    (error) =>
-      error instanceof PageNestError &&
-      error.status === 409 &&
-      error.details.current.markdown.includes("Changed elsewhere"),
+    (error) => {
+      if (!(error instanceof PageNestError) || error.status !== 409) return false;
+      const details = error.details as { current?: { markdown?: string } };
+      return Boolean(details.current?.markdown?.includes("Changed elsewhere"));
+    },
   );
   assert.match(await fs.readFile(absolute, "utf8"), /Changed elsewhere/);
 });
 
 test("saves atomically, snapshots the previous version, and restores it", async (t) => {
   const root = await fixture();
-  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  t.onTestFinished(() => fs.rm(root, { recursive: true, force: true }));
   const library = await Library.open(root);
-  const document = (await library.scanDocuments()).find((item) => item.path === "README.md");
+  const document = (await library.scanDocuments()).find((item) => item.path === "README.md")!;
 
   const saved = await library.saveDocument(
     document.id,
@@ -81,17 +82,17 @@ test("saves atomically, snapshots the previous version, and restores it", async 
   );
   assert.equal(saved.saved, true);
   assert.match(await fs.readFile(path.join(root, document.path), "utf8"), /Second copy/);
-  assert.equal(saved.versions[0].reason, "保存前快照");
+  assert.equal(saved.versions[0]!.reason, "保存前快照");
 
-  const restored = await library.restoreVersion(document.id, saved.versions[0].id);
+  const restored = await library.restoreVersion(document.id, saved.versions[0]!.id);
   assert.equal(restored.restored, true);
   assert.match(await fs.readFile(path.join(root, document.path), "utf8"), /First copy/);
-  assert.equal(restored.versions[0].reason, "恢复前自动存档");
+  assert.equal(restored.versions[0]!.reason, "恢复前自动存档");
 });
 
 test("creates nested Markdown documents", async (t) => {
   const root = await fixture();
-  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  t.onTestFinished(() => fs.rm(root, { recursive: true, force: true }));
   const library = await Library.open(root);
 
   const created = await library.createDocument({
@@ -102,12 +103,12 @@ test("creates nested Markdown documents", async (t) => {
   assert.equal(created.doc.path, "notes/ideas.md");
   assert.equal(created.doc.title, "Ideas");
   assert.match(await fs.readFile(path.join(root, "notes", "ideas.md"), "utf8"), /# Ideas/);
-  assert.equal(created.versions[0].reason, "创建文档");
+  assert.equal(created.versions[0]!.reason, "创建文档");
 });
 
 test("reuses .gitignore, persisted settings, and CLI ignore rules", async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "pagenest-ignore-"));
-  t.after(() => fs.rm(root, { recursive: true, force: true }));
+  t.onTestFinished(() => fs.rm(root, { recursive: true, force: true }));
   await fs.mkdir(path.join(root, "private"), { recursive: true });
   await fs.mkdir(path.join(root, "drafts"), { recursive: true });
   await fs.mkdir(path.join(root, "guides"), { recursive: true });
