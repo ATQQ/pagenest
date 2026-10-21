@@ -1,30 +1,60 @@
+<div align="center">
+
 # 页栖 PageNest
 
-PageNest 是一个本地优先的 Markdown 工作台。运行一条命令，就能在浏览器里阅读、筛选、全文搜索、块级编辑并回溯指定目录下的 Markdown。
+**把散落在磁盘里的 Markdown，变成一个安静、顺手的本地工作台。**
 
-当前版本为 `0.2.0`。npm 包名是 `pagenest`，提供短命令 `pn` 和完整命令 `pagenest`。
+浏览、全文搜索、块级编辑、版本回溯。没有账号，没有数据库，也不会把你的笔记搬离本机。
 
-## 0.2 要点
+[![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.12-3c873a?logo=node.js&logoColor=white)](https://nodejs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/github/license/ATQQ/pagenest)](./LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/ATQQ/pagenest?style=flat&logo=github)](https://github.com/ATQQ/pagenest)
 
-- React 19 + TypeScript 前端，Node 原生 HTTP/SSE 服务，生产环境零运行时依赖。
-- 树形与平铺列表两种导航；侧栏筛选只匹配标题和路径。
-- 独立的 `⌘/Ctrl+K` 全文搜索弹窗，服务端返回命中摘要和行号。
-- 多文档标签、章节收藏、未保存草稿恢复、保存前历史快照。
-- 常见块原地编辑；复杂块使用 Markdown 片段编辑；整篇源码模式使用 CodeMirror 6。
-- 历史 diff、恢复前自动存档、磁盘并发修改冲突处理。
-- 网页忽略规则与根目录 `.gitignore` 自动合并；不完善的规则可由用户继续补充。
-- 纸质/夜读主题，桌面三栏、平板抽屉和移动端布局。
+[快速开始](#快速开始) · [核心能力](#核心能力) · [CLI](#cli) · [开发](#开发) · [技术方案](./TECHNICAL_PLAN.md)
+
+</div>
+
+![PageNest 工作区](./docs/pagenest-workspace.png)
+
+PageNest 直接读取指定目录中的 Markdown 文件（`.md`、`.markdown`、`.mdown`），用浏览器提供阅读与编辑界面。正文始终以磁盘文件为唯一数据源，配置和历史保存在目标目录的 `.pagenest/` 中。
+
+当前版本为 `0.2.0`。项目以 npm 包结构组织，包名为 `pagenest`，安装后同时提供短命令 `pn` 和完整命令 `pagenest`。
+
+## 为什么是 PageNest
+
+- **Local-first**：笔记留在原来的目录里，可直接用 Git、iCloud、Dropbox 或任意编辑器继续管理。
+- **读写一体**：先专注阅读，需要时再进入块级或整篇源码编辑，不必在多个工具之间切换。
+- **对现有目录友好**：自动读取根目录 `.gitignore`，不要求导入、迁移或改写已有文件结构。
+- **可回溯**：保存前自动留快照，支持历史 diff、恢复和磁盘并发修改冲突处理。
+- **轻量运行**：单个 Node 进程托管前端与 API，生产环境零运行时依赖。
+
+## 核心能力
+
+| 能力         | 说明                                                                           |
+| ------------ | ------------------------------------------------------------------------------ |
+| 文档导航     | 树形目录与平铺列表两种模式，筛选只匹配标题和路径                               |
+| 全文搜索     | 独立 `⌘/Ctrl+K` 弹窗，匹配标题、路径和正文，展示上下文摘要、行号与文件位置     |
+| 多文档工作区 | 文档标签、章节收藏、草稿恢复、滚动位置和侧栏状态持久化                         |
+| 块级编辑     | 标题、段落、引用原地富文本编辑；列表、表格、代码等复杂块使用 Markdown 片段编辑 |
+| 源码编辑     | CodeMirror 6 整篇 Markdown 编辑，支持高亮、搜索、撤销重做和 `⌘/Ctrl+S`         |
+| 历史与冲突   | 保存前快照、历史 diff、恢复前自动存档、SHA-256 并发修改检测                    |
+| 忽略规则     | 合并根目录 `.gitignore`、页面规则和 CLI `--ignore`，跳过符号链接               |
+| 响应式界面   | 纸质/夜读双主题，桌面三栏、平板抽屉与移动端布局                                |
 
 ## 快速开始
 
-环境要求：
+### 环境要求
 
 - Node.js `>= 22.12`
 - npm
+- 支持现代 JavaScript 的浏览器
 
-从源码启动：
+### 从 GitHub 获取
 
 ```bash
+git clone https://github.com/ATQQ/pagenest.git
+cd pagenest
 npm install
 npm run build
 node ./bin/pagenest.js /path/to/notes
@@ -74,7 +104,9 @@ pn ./notes --ignore drafts/ --ignore "**/archive/"
 pagenest ./notes --token my-private-token
 ```
 
-## 导航、搜索与速记
+## 使用方式
+
+### 导航、搜索与速记
 
 - 左侧 `树形` 保留目录层级和展开状态；`列表` 平铺显示全部 Markdown。
 - 左侧筛选框只过滤文章标题和路径，不读取正文。
@@ -82,7 +114,7 @@ pagenest ./notes --token my-private-token
 - 标题左侧星标可收藏章节。顶部“速记”按文档聚合收藏，点击后回到对应章节。
 - 收藏优先按稳定标题 ID 定位；标题改名或移动后依次按文本、块位置回退，失效时可手动移除。
 
-## 编辑与保存
+### 编辑与保存
 
 - 点击“编辑”，再点击正文块进入原地编辑。
 - 标题、段落、引用支持富文本编辑；列表、表格、代码块等复杂结构自动改用 Markdown 片段编辑。
@@ -92,7 +124,7 @@ pagenest ./notes --token my-private-token
 - 手动保存会先为磁盘上的旧正文创建“保存前快照”，再原子写回新内容。
 - 关闭有未保存修改的标签时会要求保存、放弃或继续编辑。
 
-## 文件、历史与冲突
+### 文件、历史与冲突
 
 Markdown 文件始终是正文的唯一数据源，PageNest 不建立数据库。
 
@@ -144,6 +176,8 @@ PageNest 不试图完整复刻 Git 的全部 ignore 语义，因此保留了页�
 ## 开发
 
 ```bash
+git clone https://github.com/ATQQ/pagenest.git
+cd pagenest
 npm install
 npm run dev -- /path/to/notes
 ```
@@ -161,6 +195,12 @@ npm run test:e2e
 npm run pack:check
 ```
 
+运行完整验收：
+
+```bash
+npm run verify
+```
+
 主要目录：
 
 ```text
@@ -169,10 +209,13 @@ src/server/      扫描、忽略规则、文件写入、历史、HTTP 与 SSE
 src/cli/         参数解析、监听地址、token 与浏览器启动
 src/shared/      前后端 TypeScript 契约
 test/            单元、集成与 Playwright 验收
+docs/            README 截图等项目资源
 dist/            Vite 客户端与 tsc 服务端构建产物
 ```
 
 详细架构、兼容边界与演进路线见 [TECHNICAL_PLAN.md](./TECHNICAL_PLAN.md)。
+
+如果遇到问题或有功能建议，请提交 [Issue](https://github.com/ATQQ/pagenest/issues)；代码贡献请从 [Pull Request](https://github.com/ATQQ/pagenest/pulls) 开始。
 
 ## 局域网访问
 
@@ -203,4 +246,4 @@ pn ./notes --host 0.0.0.0
 
 ## License
 
-MIT
+[MIT](./LICENSE) © PageNest contributors

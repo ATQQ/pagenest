@@ -13,6 +13,7 @@
   "files": [
     "bin",
     "dist",
+    "docs",
     "README.md",
     "TECHNICAL_PLAN.md",
     "LICENSE"
@@ -43,8 +44,19 @@
     "markdown",
     "editor",
     "local-first",
-    "cli"
+    "cli",
+    "notes",
+    "knowledge-base",
+    "version-history"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ATQQ/pagenest.git"
+  },
+  "homepage": "https://github.com/ATQQ/pagenest#readme",
+  "bugs": {
+    "url": "https://github.com/ATQQ/pagenest/issues"
+  },
   "license": "MIT",
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
