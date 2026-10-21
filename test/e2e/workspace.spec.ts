@@ -96,6 +96,44 @@ test("opens source mode with CodeMirror", async ({ page }) => {
   await expect(page.locator(".cm-content")).toContainText("A source-mode sentence.");
 });
 
+test("keeps source text readable in paper and night themes", async ({ page }) => {
+  await page.getByRole("button", { name: "源码" }).click();
+  await expect(page.locator(".cm-content")).toBeVisible();
+
+  const sourceContrast = () =>
+    page.evaluate(() => {
+      const pane = document.querySelector<HTMLElement>('[aria-label="Markdown 源码编辑"]');
+      const content = pane?.querySelector<HTMLElement>(".cm-content");
+      if (!pane || !content) throw new Error("Source editor is not available");
+
+      const channels = (color: string) =>
+        color
+          .match(/[\d.]+/g)
+          ?.slice(0, 3)
+          .map(Number);
+      const luminance = ([red, green, blue]: number[]) =>
+        [red, green, blue]
+          .map((value) => {
+            const channel = value! / 255;
+            return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+          })
+          .reduce((total, value, index) => total + value * [0.2126, 0.7152, 0.0722][index]!, 0);
+
+      const foreground = channels(getComputedStyle(content).color);
+      const background = channels(getComputedStyle(pane).backgroundColor);
+      if (!foreground || !background) throw new Error("Could not read source editor colors");
+      const light = Math.max(luminance(foreground), luminance(background));
+      const dark = Math.min(luminance(foreground), luminance(background));
+      return (light + 0.05) / (dark + 0.05);
+    });
+
+  expect(await sourceContrast()).toBeGreaterThanOrEqual(7);
+  await page.getByRole("button", { name: "切换深浅主题" }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "night");
+  await expect(page.locator(".cm-content")).toBeVisible();
+  expect(await sourceContrast()).toBeGreaterThanOrEqual(7);
+});
+
 test("opens the mobile directory and page rail", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile-chromium", "Mobile layout only");
   await page.getByRole("button", { name: "收起目录" }).click();

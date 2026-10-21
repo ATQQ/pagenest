@@ -32,6 +32,7 @@ export function SourceEditor({ markdown, dark, onChange, onSave }: SourceEditorP
       import("@codemirror/search"),
       import("@codemirror/lang-markdown"),
       import("@codemirror/language"),
+      import("@lezer/highlight"),
     ]).then(
       ([
         { EditorState },
@@ -47,9 +48,57 @@ export function SourceEditor({ markdown, dark, onChange, onSave }: SourceEditorP
         { defaultKeymap, history, historyKeymap, indentWithTab },
         { searchKeymap, highlightSelectionMatches },
         { markdown: markdownLanguage },
-        { syntaxHighlighting, defaultHighlightStyle },
+        { syntaxHighlighting, HighlightStyle },
+        { tags },
       ]) => {
         if (cancelled || !hostRef.current) return;
+        const markdownHighlight = HighlightStyle.define([
+          {
+            tag: [
+              tags.heading1,
+              tags.heading2,
+              tags.heading3,
+              tags.heading4,
+              tags.heading5,
+              tags.heading6,
+            ],
+            color: "var(--source-syntax-heading)",
+            fontWeight: "650",
+          },
+          {
+            tag: tags.strong,
+            color: "var(--source-text-strong)",
+            fontWeight: "700",
+          },
+          {
+            tag: tags.emphasis,
+            color: "var(--source-text)",
+            fontStyle: "italic",
+          },
+          {
+            tag: [tags.link, tags.url],
+            color: "var(--source-syntax-link)",
+            textDecoration: "underline",
+          },
+          {
+            tag: [tags.monospace, tags.string, tags.labelName],
+            color: "var(--source-syntax-code)",
+            backgroundColor: "var(--source-code-bg)",
+          },
+          {
+            tag: tags.quote,
+            color: "var(--source-syntax-quote)",
+          },
+          {
+            tag: tags.strikethrough,
+            color: "var(--source-muted)",
+            textDecoration: "line-through",
+          },
+          {
+            tag: [tags.processingInstruction, tags.comment, tags.contentSeparator],
+            color: "var(--source-syntax-marker)",
+          },
+        ]);
         view = new EditorView({
           parent: hostRef.current,
           state: EditorState.create({
@@ -63,7 +112,7 @@ export function SourceEditor({ markdown, dark, onChange, onSave }: SourceEditorP
               history(),
               highlightSelectionMatches(),
               markdownLanguage(),
-              syntaxHighlighting(defaultHighlightStyle),
+              syntaxHighlighting(markdownHighlight),
               keymap.of([
                 {
                   key: "Mod-s",
@@ -86,19 +135,22 @@ export function SourceEditor({ markdown, dark, onChange, onSave }: SourceEditorP
                   "&": {
                     height: "100%",
                     backgroundColor: "var(--source-bg)",
-                    color: "var(--text)",
+                    color: "var(--source-text)",
                     fontSize: "14px",
                   },
                   ".cm-scroller": {
                     fontFamily: '"SFMono-Regular", "Cascadia Code", "Noto Sans Mono", monospace',
-                    lineHeight: "1.75",
+                    lineHeight: "1.7",
                     overflow: "auto",
                   },
-                  ".cm-content": { padding: "28px 32px 80px" },
+                  ".cm-content": {
+                    padding: "28px 32px 80px",
+                    caretColor: "var(--source-caret)",
+                  },
                   ".cm-gutters": {
                     backgroundColor: "var(--source-gutter)",
-                    color: "var(--muted)",
-                    border: "none",
+                    color: "var(--source-muted)",
+                    borderRight: "1px solid var(--source-line)",
                     paddingLeft: "8px",
                   },
                   ".cm-activeLine, .cm-activeLineGutter": {
@@ -106,6 +158,19 @@ export function SourceEditor({ markdown, dark, onChange, onSave }: SourceEditorP
                   },
                   ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": {
                     backgroundColor: "var(--selection) !important",
+                  },
+                  ".cm-cursor, .cm-dropCursor": {
+                    borderLeftColor: "var(--source-caret)",
+                  },
+                  ".cm-panels": {
+                    color: "var(--source-text)",
+                    backgroundColor: "var(--source-head-bg)",
+                  },
+                  ".cm-searchMatch": {
+                    backgroundColor: "var(--source-search)",
+                  },
+                  ".cm-searchMatch.cm-searchMatch-selected": {
+                    backgroundColor: "var(--source-search-selected)",
                   },
                   "&.cm-focused": { outline: "none" },
                 },
