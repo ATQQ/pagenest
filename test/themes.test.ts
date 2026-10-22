@@ -91,3 +91,61 @@ test("filled accent surfaces fall back to the theme accent and dim themselves at
     assert.ok(block.includes("--brand-fill:"), `${id} is missing --brand-fill`);
   }
 });
+
+/** 侧栏面板底色：paper-deep 以 58% 叠在 paper 上 */
+function panelBackground(
+  paper: [number, number, number],
+  paperDeep: [number, number, number],
+): [number, number, number] {
+  const mixed = [0, 1, 2].map((channel) =>
+    Math.round(paperDeep[channel]! * 0.58 + paper[channel]! * 0.42),
+  );
+  return [mixed[0]!, mixed[1]!, mixed[2]!];
+}
+
+function luminance(rgb: [number, number, number]): number {
+  const channels = rgb.map((channel) => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * channels[0]! + 0.7152 * channels[1]! + 0.0722 * channels[2]!;
+}
+
+function contrast(a: [number, number, number], b: [number, number, number]): number {
+  const first = luminance(a);
+  const second = luminance(b);
+  const [light, dark] = first > second ? [first, second] : [second, first];
+  return (light + 0.05) / (dark + 0.05);
+}
+
+function tokenOf(block: string, token: string): [number, number, number] {
+  const value = block.match(new RegExp(`${token}:\\s*#([0-9a-f]{6})`, "i"))?.[1];
+  if (!value) throw new Error(`theme block is missing ${token}`);
+  const channels = [0, 1, 2].map((channel) =>
+    parseInt(value.slice(channel * 2, channel * 2 + 2), 16),
+  );
+  return [channels[0]!, channels[1]!, channels[2]!];
+}
+
+/**
+ * 侧栏与右栏的文字必须读得清：正文级文字至少 AA（4.5:1），
+ * 更弱的辅助色至少达到 3:1 的非文本对比度下限。
+ */
+test("every theme keeps sidebar text legible against the panel surface", () => {
+  for (const id of themeIds) {
+    const block =
+      globalCss.match(new RegExp(`:root\\[data-theme="${id}"\\] \\{[^}]*\\}`))?.[0] ?? "";
+    const background = panelBackground(tokenOf(block, "--paper"), tokenOf(block, "--paper-deep"));
+
+    for (const token of ["--text", "--text-soft", "--muted"]) {
+      const ratio = contrast(tokenOf(block, token), background);
+      assert.ok(
+        ratio >= 4.5,
+        `${id}: ${token} only reaches ${ratio.toFixed(2)}:1 against the panel`,
+      );
+    }
+
+    const faint = contrast(tokenOf(block, "--faint"), background);
+    assert.ok(faint >= 3, `${id}: --faint only reaches ${faint.toFixed(2)}:1 against the panel`);
+  }
+});

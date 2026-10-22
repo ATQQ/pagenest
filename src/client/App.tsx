@@ -744,8 +744,8 @@ export default function App() {
               onClick={() => setSidebarCollapsed(!ui.sidebarCollapsed)}
             >
               <Icon
-                name={ui.sidebarCollapsed ? "panelExpandLeft" : "panelCollapseLeft"}
-                size={14}
+                name={ui.sidebarCollapsed ? "circleChevronRight" : "circleChevronLeft"}
+                size={16}
               />
             </button>
           </TooltipButton>
@@ -1084,7 +1084,10 @@ export default function App() {
               aria-pressed={!ui.railCollapsed}
               onClick={() => setRailCollapsed(!ui.railCollapsed)}
             >
-              <Icon name={ui.railCollapsed ? "panelExpandRight" : "panelCollapseRight"} size={14} />
+              <Icon
+                name={ui.railCollapsed ? "circleChevronLeft" : "circleChevronRight"}
+                size={16}
+              />
             </button>
           </TooltipButton>
         </div>

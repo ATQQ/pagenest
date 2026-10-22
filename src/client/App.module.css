@@ -533,12 +533,12 @@ kbd {
   position: absolute;
   z-index: 13;
   display: grid;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  color: var(--muted);
+  border: 1px solid var(--line-strong);
+  border-radius: 9px;
+  color: var(--text-soft);
   cursor: pointer;
   background: var(--surface-solid);
   box-shadow: var(--shadow-small);
@@ -546,23 +546,34 @@ kbd {
     left 220ms ease,
     right 220ms ease,
     color 140ms ease,
-    border-color 140ms ease;
+    border-color 140ms ease,
+    background 140ms ease;
 }
 
 .panelToggle:hover {
   color: var(--accent);
-  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 46%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-solid));
+}
+
+.panelToggle:active {
+  background: color-mix(in srgb, var(--accent) 16%, var(--surface-solid));
+}
+
+.panelToggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .panelToggleLeft {
   top: 50%;
-  left: max(0px, var(--panel-left) - 11px);
+  left: max(0px, var(--panel-left) - 14px);
   transform: translateY(-50%);
 }
 
 .panelToggleRight {
   top: 50%;
-  right: max(0px, var(--panel-right) - 11px);
+  right: max(0px, var(--panel-right) - 14px);
   transform: translateY(-50%);
 }
 
@@ -610,7 +621,7 @@ kbd {
 .kicker {
   color: var(--accent);
   font-family: var(--sans);
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -622,10 +633,11 @@ kbd {
 
 .miniButton {
   height: 29px;
-  padding: 0 9px;
+  padding: 0 10px;
   border-color: var(--line);
   color: var(--text-soft);
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 600;
   background: var(--surface);
 }
 
@@ -656,11 +668,12 @@ kbd {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  height: 27px;
+  height: 28px;
   border: 0;
   border-radius: 6px;
-  color: var(--muted);
-  font-size: 10px;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
   background: transparent;
 }
@@ -695,7 +708,7 @@ kbd {
   border: 0;
   outline: 0;
   color: var(--text);
-  font-size: 11px;
+  font-size: 11.5px;
   background: transparent;
 }
 
@@ -757,10 +770,10 @@ kbd {
 }
 
 .folderItem {
-  height: 29px;
+  height: 30px;
   padding: 0 7px;
   font-family: var(--serif);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
 }
 
@@ -789,9 +802,10 @@ kbd {
 }
 
 .navItem {
-  min-height: 30px;
+  min-height: 32px;
   padding: 5px 8px 5px 10px;
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .navItem span {
@@ -803,7 +817,7 @@ kbd {
 .navItem svg,
 .flatItem > svg {
   flex: none;
-  color: var(--faint);
+  color: var(--muted);
 }
 
 .navItemActive {
@@ -832,15 +846,16 @@ kbd {
   overflow: hidden;
   color: inherit;
   font-family: var(--serif);
-  font-size: 11px;
+  font-size: 12px;
+  font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .flatMain small {
   overflow: hidden;
-  color: var(--faint);
-  font-size: 8px;
+  color: var(--muted);
+  font-size: 9.5px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -857,9 +872,9 @@ kbd {
 .navEmpty,
 .railEmpty {
   padding: 26px 14px;
-  color: var(--faint);
+  color: var(--muted);
   font-family: var(--serif);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.8;
   text-align: center;
 }
@@ -889,7 +904,7 @@ kbd {
   gap: 7px;
   min-width: 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .localNote span:last-child {
@@ -918,7 +933,8 @@ kbd {
   padding: 0;
   border: 0;
   color: var(--muted);
-  font-size: 9px;
+  font-size: 10px;
+  font-weight: 600;
   cursor: pointer;
   background: transparent;
 }
@@ -1877,14 +1893,15 @@ kbd {
 
 .railTabList button {
   display: inline-flex;
-  height: 28px;
+  height: 30px;
   align-items: center;
   justify-content: center;
   gap: 5px;
   border: 0;
   border-radius: 5px;
-  color: var(--muted);
-  font-size: 9px;
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 600;
   cursor: pointer;
   background: transparent;
 }
@@ -1897,12 +1914,13 @@ kbd {
 
 .railTabList button span {
   display: grid;
-  min-width: 16px;
-  height: 16px;
+  min-width: 17px;
+  height: 17px;
   place-items: center;
   border-radius: 99px;
   color: var(--accent);
-  font-size: 8px;
+  font-size: 9.5px;
+  font-weight: 650;
   background: var(--accent-soft);
 }
 
@@ -1921,15 +1939,16 @@ kbd {
 
 .outlineItem {
   overflow: hidden;
-  padding-top: 7px;
+  padding-top: 6px;
   padding-right: 8px;
-  padding-bottom: 7px;
+  padding-bottom: 6px;
   border: 0;
   border-left: 2px solid transparent;
-  color: var(--muted);
+  color: var(--text-soft);
   font-family: var(--serif);
-  font-size: 10px;
-  line-height: 1.4;
+  font-size: 11.5px;
+  font-weight: 550;
+  line-height: 1.45;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1954,8 +1973,8 @@ kbd {
   margin: 14px 15px;
   padding-top: 11px;
   border-top: 1px solid var(--line);
-  color: var(--faint);
-  font-size: 8px;
+  color: var(--muted);
+  font-size: 9.5px;
 }
 
 .historyList {
@@ -1974,6 +1993,7 @@ kbd {
   border: 0;
   border-radius: 7px;
   color: var(--text-soft);
+  font-weight: 550;
   text-align: left;
   background: transparent;
 }
@@ -1996,7 +2016,7 @@ kbd {
   height: 6px;
   flex: none;
   border-radius: 50%;
-  background: var(--faint);
+  background: var(--muted);
 }
 
 .historyCurrent .historyDot {
@@ -2015,7 +2035,7 @@ kbd {
 .historyMain strong,
 .historyCurrent strong {
   overflow: hidden;
-  font-size: 9px;
+  font-size: 10.5px;
   font-weight: 650;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2023,13 +2043,13 @@ kbd {
 
 .historyMain small,
 .historyCurrent small {
-  color: var(--faint);
-  font-size: 8px;
+  color: var(--muted);
+  font-size: 9.5px;
 }
 
 .historyDelta {
   font-family: var(--mono);
-  font-size: 8px;
+  font-size: 9.5px;
 }
 
 .deltaUp {
@@ -2278,8 +2298,8 @@ kbd {
 }
 
 .searchResultMain small {
-  color: var(--faint);
-  font-size: 8px;
+  color: var(--muted);
+  font-size: 9.5px;
 }
 
 .searchResultMain span {
@@ -2548,8 +2568,8 @@ kbd {
 }
 
 .favoriteDoc small {
-  color: var(--faint);
-  font-size: 8px;
+  color: var(--muted);
+  font-size: 9.5px;
 }
 
 .favoriteRow {
