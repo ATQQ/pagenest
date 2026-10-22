@@ -103,8 +103,8 @@ test("points the divider arrow at the direction each panel will move", async ({
   const arrow = (label: string) => page.locator(`button[aria-label="${label}"] svg path`);
 
   // 展开态：箭头指向收起方向
-  await expect(arrow("收起资料夹")).toHaveAttribute("d", "m14 6-6 6 6 6");
-  await expect(arrow("收起本页导航")).toHaveAttribute("d", "m10 6 6 6-6 6");
+  await expect(arrow("收起资料夹")).toHaveAttribute("d", "m15 6-6 6 6 6");
+  await expect(arrow("收起本页导航")).toHaveAttribute("d", "m9 6 6 6-6 6");
 
   await page.getByRole("button", { name: "收起资料夹" }).click();
   await page.getByRole("button", { name: "收起本页导航" }).click();
@@ -112,6 +112,6 @@ test("points the divider arrow at the direction each panel will move", async ({
   await expect(page.getByRole("button", { name: "展开本页导航" })).toBeVisible();
 
   // 收起态：箭头反向，指向重新展开的方向
-  await expect(arrow("展开资料夹")).toHaveAttribute("d", "m10 6 6 6-6 6");
-  await expect(arrow("展开本页导航")).toHaveAttribute("d", "m14 6-6 6 6 6");
+  await expect(arrow("展开资料夹")).toHaveAttribute("d", "m9 6 6 6-6 6");
+  await expect(arrow("展开本页导航")).toHaveAttribute("d", "m15 6-6 6 6 6");
 });

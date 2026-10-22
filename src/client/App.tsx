@@ -743,7 +743,7 @@ export default function App() {
               aria-pressed={!ui.sidebarCollapsed}
               onClick={() => setSidebarCollapsed(!ui.sidebarCollapsed)}
             >
-              <Icon name={ui.sidebarCollapsed ? "chevronRight" : "chevronLeft"} size={15} />
+              <Icon name={ui.sidebarCollapsed ? "chevronRight" : "chevronLeft"} size={13} />
             </button>
           </TooltipButton>
 
@@ -1081,7 +1081,7 @@ export default function App() {
               aria-pressed={!ui.railCollapsed}
               onClick={() => setRailCollapsed(!ui.railCollapsed)}
             >
-              <Icon name={ui.railCollapsed ? "chevronLeft" : "chevronRight"} size={15} />
+              <Icon name={ui.railCollapsed ? "chevronLeft" : "chevronRight"} size={13} />
             </button>
           </TooltipButton>
         </div>

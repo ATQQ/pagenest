@@ -132,8 +132,8 @@ const paths: Record<IconName, React.ReactNode> = {
     <path d="M20 7v5h-5M4 17v-5h5M6.1 9a7 7 0 0 1 11.4-2.3L20 9M4 15l2.5 2.3A7 7 0 0 0 18 15" />
   ),
   check: <path d="m5 12 4 4L19 6" />,
-  chevronLeft: <path d="m14 6-6 6 6 6" />,
-  chevronRight: <path d="m10 6 6 6-6 6" />,
+  chevronLeft: <path d="m15 6-6 6 6 6" />,
+  chevronRight: <path d="m9 6 6 6-6 6" />,
   external: <path d="M14 4h6v6M20 4l-9 9M18 13v7H4V6h7" />,
 };
 

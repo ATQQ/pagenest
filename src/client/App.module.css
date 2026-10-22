@@ -533,11 +533,13 @@ kbd {
   position: absolute;
   z-index: 13;
   display: grid;
-  width: 20px;
-  height: 36px;
+  width: 18px;
+  height: 30px;
+  /* 清掉浏览器默认按钮内边距，否则窄按钮里的图标会被挤偏 */
+  padding: 0;
   place-items: center;
   border: 1px solid var(--line-strong);
-  border-radius: 9px;
+  border-radius: 8px;
   color: var(--text-soft);
   cursor: pointer;
   background: var(--surface-solid);
@@ -567,13 +569,13 @@ kbd {
 
 .panelToggleLeft {
   top: 50%;
-  left: max(0px, var(--panel-left) - 10px);
+  left: max(0px, var(--panel-left) - 9px);
   transform: translateY(-50%);
 }
 
 .panelToggleRight {
   top: 50%;
-  right: max(0px, var(--panel-right) - 10px);
+  right: max(0px, var(--panel-right) - 9px);
   transform: translateY(-50%);
 }
 
