@@ -7,6 +7,7 @@ import type {
   Settings,
   VersionSummary,
 } from "../../shared/contracts";
+import { defaultTheme, isThemeId, type ThemeId } from "../themes";
 
 export const UI_STORAGE_KEY = "pagenest.ui.v2";
 export const LEGACY_STORAGE_KEY = "pagenest.ui.v1";
@@ -25,7 +26,7 @@ export interface TabState {
 }
 
 export interface WorkspaceUi {
-  theme: "paper" | "eye" | "night";
+  theme: ThemeId;
   sidebarCollapsed: boolean;
   folders: string[];
   railTab: "outline" | "history";
@@ -72,7 +73,7 @@ interface WorkspaceState extends PersistedWorkspace {
 }
 
 const defaultUi: WorkspaceUi = {
-  theme: "paper",
+  theme: defaultTheme,
   sidebarCollapsed: false,
   folders: [],
   railTab: "outline",
@@ -136,7 +137,7 @@ function migrateLegacy(raw: string): string | null {
       drafts: objectRecord<string>(value.drafts),
       favorites: normalizedFavorites,
       ui: {
-        theme: legacyUi.theme === "night" || legacyUi.theme === "eye" ? legacyUi.theme : "paper",
+        theme: isThemeId(legacyUi.theme) ? legacyUi.theme : defaultTheme,
         sidebarCollapsed: Boolean(legacyUi.sidebarCollapsed),
         folders: Array.isArray(legacyUi.folders)
           ? legacyUi.folders.filter((item): item is string => typeof item === "string")
@@ -334,6 +335,19 @@ export const useWorkspace = create<WorkspaceState>()(
         favorites: state.favorites,
         ui: state.ui,
       }),
+      merge: (persisted, current) => {
+        const state = persisted as Partial<PersistedWorkspace> | undefined;
+        const ui = state?.ui;
+        return {
+          ...current,
+          ...state,
+          ui: {
+            ...current.ui,
+            ...ui,
+            theme: isThemeId(ui?.theme) ? ui.theme : current.ui.theme,
+          },
+        };
+      },
     },
   ),
 );

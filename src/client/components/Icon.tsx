@@ -7,6 +7,10 @@ export type IconName =
   | "moon"
   | "sun"
   | "leaf"
+  | "book"
+  | "cup"
+  | "contrast"
+  | "display"
   | "file"
   | "folder"
   | "folderOpen"
@@ -52,6 +56,30 @@ const paths: Record<IconName, React.ReactNode> = {
     <>
       <path d="M20 4C12 4.5 6.5 8 5.3 14.1c-.7 3.6 1.6 5.9 4.4 5.9 6 0 9.4-6.7 10.3-16Z" />
       <path d="M4 20c2.7-4.2 6.1-7.2 10.5-9.2" />
+    </>
+  ),
+  book: (
+    <>
+      <path d="M12 6.5C10.4 5.2 8.2 4.5 5.5 4.5H3v13h2.5c2.7 0 4.9.7 6.5 2 1.6-1.3 3.8-2 6.5-2H21v-13h-2.5c-2.7 0-4.9.7-6.5 2Z" />
+      <path d="M12 6.5v13" />
+    </>
+  ),
+  cup: (
+    <>
+      <path d="M4.5 7.5h12v6a6 6 0 0 1-12 0Z" />
+      <path d="M16.5 9H19a2 2 0 0 1 0 4h-2.5M4 20.5h13" />
+    </>
+  ),
+  contrast: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" stroke="none" />
+    </>
+  ),
+  display: (
+    <>
+      <rect x="3" y="4.5" width="18" height="12" rx="1.8" />
+      <path d="M9 20.5h6M12 16.5v4" />
     </>
   ),
   file: (

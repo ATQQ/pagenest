@@ -29,9 +29,10 @@ import {
   RestoreDialog,
   SearchDialog,
 } from "./components/Dialogs";
-import { Icon, type IconName } from "./components/Icon";
+import { Icon } from "./components/Icon";
 import { Sidebar } from "./components/Sidebar";
 import { SourceEditor } from "./components/SourceEditor";
+import { themeKindOf, themeOptions } from "./themes";
 import {
   blockAtLine,
   headingsFromBlocks,
@@ -70,16 +71,7 @@ const closedEditorSession: Omit<EditorSession, "docId"> = {
   editingBlockId: null,
 };
 
-const themeOptions: Array<{
-  value: "paper" | "eye" | "night";
-  label: string;
-  description: string;
-  icon: IconName;
-}> = [
-  { value: "paper", label: "纸页", description: "温暖米白", icon: "sun" },
-  { value: "eye", label: "护眼", description: "柔和草绿", icon: "leaf" },
-  { value: "night", label: "夜读", description: "低亮暖黑", icon: "moon" },
-];
+const themeGroups: string[] = [...new Set(themeOptions.map((option) => option.group))];
 
 const toolbarCommands: Array<{
   command: string;
@@ -202,6 +194,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = ui.theme;
+    document.documentElement.dataset.themeKind = themeKindOf(ui.theme);
   }, [ui.theme]);
 
   useEffect(() => {
@@ -684,23 +677,32 @@ export default function App() {
                   <DropdownMenu.Label className={styles.themeMenuLabel}>
                     阅读主题
                   </DropdownMenu.Label>
-                  {themeOptions.map((option) => (
-                    <DropdownMenu.Item
-                      className={styles.themeMenuItem}
-                      key={option.value}
-                      onSelect={() => setTheme(option.value)}
-                    >
-                      <span
-                        className={`${styles.themeSwatch} ${styles[`themeSwatch${option.value}`]}`}
-                      />
-                      <span className={styles.themeMenuCopy}>
-                        <strong>{option.label}</strong>
-                        <small>{option.description}</small>
-                      </span>
-                      {ui.theme === option.value ? (
-                        <Icon className={styles.themeCheck} name="check" size={15} />
-                      ) : null}
-                    </DropdownMenu.Item>
+                  {themeGroups.map((group) => (
+                    <DropdownMenu.Group key={group}>
+                      <DropdownMenu.Label className={styles.themeGroupLabel}>
+                        {group}
+                      </DropdownMenu.Label>
+                      {themeOptions
+                        .filter((option) => option.group === group)
+                        .map((option) => (
+                          <DropdownMenu.Item
+                            className={styles.themeMenuItem}
+                            key={option.value}
+                            onSelect={() => setTheme(option.value)}
+                          >
+                            <span
+                              className={`${styles.themeSwatch} ${styles[`themeSwatch${option.value}`]}`}
+                            />
+                            <span className={styles.themeMenuCopy}>
+                              <strong>{option.label}</strong>
+                              <small>{option.description}</small>
+                            </span>
+                            {ui.theme === option.value ? (
+                              <Icon className={styles.themeCheck} name="check" size={15} />
+                            ) : null}
+                          </DropdownMenu.Item>
+                        ))}
+                    </DropdownMenu.Group>
                   ))}
                 </DropdownMenu.Content>
               </DropdownMenu.Portal>
@@ -941,7 +943,7 @@ export default function App() {
                 </div>
                 <SourceEditor
                   markdown={markdown}
-                  dark={ui.theme === "night"}
+                  dark={themeKindOf(ui.theme) === "dark"}
                   onChange={(value) => activeDoc && setDraft(activeDoc.id, value)}
                   onSave={() => void saveAndFinishEditing()}
                 />
