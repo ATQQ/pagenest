@@ -11,8 +11,6 @@ export type IconName =
   | "cup"
   | "contrast"
   | "display"
-  | "circleChevronLeft"
-  | "circleChevronRight"
   | "file"
   | "folder"
   | "folderOpen"
@@ -82,18 +80,6 @@ const paths: Record<IconName, React.ReactNode> = {
     <>
       <rect x="3" y="4.5" width="18" height="12" rx="1.8" />
       <path d="M9 20.5h6M12 16.5v4" />
-    </>
-  ),
-  circleChevronLeft: (
-    <>
-      <circle cx="12" cy="12" r="9.6" />
-      <path d="m14.2 15.6-4-3.6 4-3.6" />
-    </>
-  ),
-  circleChevronRight: (
-    <>
-      <circle cx="12" cy="12" r="9.6" />
-      <path d="m9.8 8.4 4 3.6-4 3.6" />
     </>
   ),
   file: (

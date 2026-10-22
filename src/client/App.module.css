@@ -533,8 +533,8 @@ kbd {
   position: absolute;
   z-index: 13;
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 20px;
+  height: 36px;
   place-items: center;
   border: 1px solid var(--line-strong);
   border-radius: 9px;
@@ -567,13 +567,13 @@ kbd {
 
 .panelToggleLeft {
   top: 50%;
-  left: max(0px, var(--panel-left) - 14px);
+  left: max(0px, var(--panel-left) - 10px);
   transform: translateY(-50%);
 }
 
 .panelToggleRight {
   top: 50%;
-  right: max(0px, var(--panel-right) - 14px);
+  right: max(0px, var(--panel-right) - 10px);
   transform: translateY(-50%);
 }
 
