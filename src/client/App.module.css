@@ -479,19 +479,98 @@ kbd {
   color: var(--text-soft);
 }
 
+/* 面板宽度用可动画的自定义属性驱动：
+   侧栏 / 右栏收合时，--panel-left 与 --panel-right 同步过渡，
+   .article 用两者之差做一次位移补偿，正文始终相对视口居中、不左右跳动。 */
+@property --panel-left {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
+@property --panel-right {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+
 .workspace {
   position: relative;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) 274px;
+  grid-template-columns: auto minmax(0, 1fr) var(--panel-right);
   min-height: 0;
   flex: 1;
+  --panel-left: 0px;
+  --panel-right: 0px;
+  --rail-width: 274px;
+  /* 正文居中补偿：左右面板宽度不等时，把正文拉回视口正中 */
+  --read-shift: calc((var(--panel-right) - var(--panel-left)) / 2);
+  /* 正文可用的最大宽度，保证居中后不会压到打开的面板下面 */
+  --read-max: calc(100vw - 2 * max(var(--panel-left), var(--panel-right)));
+  transition:
+    --panel-left 220ms ease,
+    --panel-right 220ms ease;
+}
+
+.workspaceSidebarOpen {
+  --panel-left: 278px;
+}
+
+.workspaceSidebarClosed {
+  --panel-left: 0px;
+}
+
+.workspaceRailOpen {
+  --panel-right: var(--rail-width);
+}
+
+.workspaceRailClosed {
+  --panel-right: 0px;
+}
+
+/* 面板分隔线上的折叠按钮：既是收起入口，也是收起后的展开入口 */
+.panelToggle {
+  position: absolute;
+  z-index: 13;
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--muted);
+  cursor: pointer;
+  background: var(--surface-solid);
+  box-shadow: var(--shadow-small);
+  transition:
+    left 220ms ease,
+    right 220ms ease,
+    color 140ms ease,
+    border-color 140ms ease;
+}
+
+.panelToggle:hover {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+.panelToggleLeft {
+  top: 50%;
+  left: max(0px, var(--panel-left) - 11px);
+  transform: translateY(-50%);
+}
+
+.panelToggleRight {
+  top: 50%;
+  right: max(0px, var(--panel-right) - 11px);
+  transform: translateY(-50%);
 }
 
 .sidebar {
   position: relative;
   z-index: 12;
   display: flex;
-  width: 278px;
+  width: var(--panel-left);
   min-width: 0;
   min-height: 0;
   flex-direction: column;
@@ -499,14 +578,12 @@ kbd {
   border-right: 1px solid var(--line);
   background: color-mix(in srgb, var(--paper-deep) 58%, transparent);
   transition:
-    width 220ms ease,
     opacity 180ms ease,
     transform 220ms ease;
 }
 
 .sidebarCollapsed {
-  width: 0;
-  border-right-color: transparent;
+  border-right-width: 0;
   opacity: 0;
   pointer-events: none;
 }
@@ -1176,7 +1253,9 @@ kbd {
 
 .article {
   position: relative;
-  width: min(100%, 820px);
+  /* 左右面板宽度不等时，把居中的正文拉回视口正中 */
+  left: var(--read-shift);
+  width: min(100%, 820px, var(--read-max));
   min-height: 100%;
   margin: 0 auto;
   padding: 46px clamp(28px, 5.4vw, 68px) 110px;
@@ -1761,8 +1840,15 @@ kbd {
   display: flex;
   min-height: 0;
   flex-direction: column;
+  overflow: hidden;
   border-left: 1px solid var(--line);
   background: color-mix(in srgb, var(--paper-deep) 38%, transparent);
+}
+
+.railCollapsed {
+  border-left-width: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .railMobileHead {
@@ -1771,9 +1857,12 @@ kbd {
 
 .railTabs {
   display: flex;
+  width: var(--rail-width);
   min-height: 0;
   flex: 1;
   flex-direction: column;
+  /* 收合时内容保持原宽度并靠右，被面板裁切而不是被压扁 */
+  margin-left: auto;
 }
 
 .railTabList {
@@ -2544,13 +2633,27 @@ kbd {
   }
 
   .workspace {
-    grid-template-columns: auto minmax(0, 1fr) 250px;
+    --rail-width: 250px;
   }
 }
 
 @media (max-width: 1023px) {
+  .workspace,
+  .workspaceRailOpen,
+  .workspaceRailClosed {
+    /* 右栏在窄屏是底部抽屉，不占栅格，正文也无需为它让位 */
+    --panel-right: 0px;
+  }
+
   .workspace {
-    grid-template-columns: auto minmax(0, 1fr);
+    /* 窄屏下右栏是抽屉、侧栏仍占栅格，正文无法既贴紧侧栏又保持视口居中，
+       这时退回「在可用空间内居中」，避免正文压到侧栏下面。 */
+    --read-shift: 0px;
+    --read-max: 100vw;
+  }
+
+  .panelToggle {
+    display: none;
   }
 
   .rail {
@@ -2559,6 +2662,7 @@ kbd {
     bottom: 0;
     left: 0;
     z-index: 30;
+    width: auto;
     max-height: 62vh;
     border-top: 1px solid var(--line-strong);
     border-left: 0;
@@ -2661,6 +2765,13 @@ kbd {
   .sidebarCollapsed {
     width: min(84vw, 310px);
     opacity: 1;
+  }
+
+  .workspace,
+  .workspaceSidebarOpen,
+  .workspaceSidebarClosed {
+    /* 侧栏在窄屏是抽屉，不占栅格，正文也无需为它让位 */
+    --panel-left: 0px;
   }
 
   .sidebarMobileOpen {

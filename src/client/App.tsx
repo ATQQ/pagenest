@@ -115,6 +115,7 @@ export default function App() {
   const setTabScroll = useWorkspace((state) => state.setTabScroll);
   const setTheme = useWorkspace((state) => state.setTheme);
   const setSidebarCollapsed = useWorkspace((state) => state.setSidebarCollapsed);
+  const setRailCollapsed = useWorkspace((state) => state.setRailCollapsed);
   const setFolders = useWorkspace((state) => state.setFolders);
   const setRailTab = useWorkspace((state) => state.setRailTab);
   const setNavMode = useWorkspace((state) => state.setNavMode);
@@ -718,7 +719,11 @@ export default function App() {
           </div>
         </header>
 
-        <div className={styles.workspace}>
+        <div
+          className={`${styles.workspace} ${
+            ui.sidebarCollapsed ? styles.workspaceSidebarClosed : styles.workspaceSidebarOpen
+          } ${ui.railCollapsed ? styles.workspaceRailClosed : styles.workspaceRailOpen}`}
+        >
           {(mobileSidebarOpen || mobileRailOpen) && (
             <button
               className={styles.drawerScrim}
@@ -730,6 +735,21 @@ export default function App() {
               }}
             />
           )}
+          <TooltipButton label={ui.sidebarCollapsed ? "展开资料夹" : "收起资料夹"} side="right">
+            <button
+              className={`${styles.panelToggle} ${styles.panelToggleLeft}`}
+              type="button"
+              aria-label={ui.sidebarCollapsed ? "展开资料夹" : "收起资料夹"}
+              aria-pressed={!ui.sidebarCollapsed}
+              onClick={() => setSidebarCollapsed(!ui.sidebarCollapsed)}
+            >
+              <Icon
+                name={ui.sidebarCollapsed ? "panelExpandLeft" : "panelCollapseLeft"}
+                size={14}
+              />
+            </button>
+          </TooltipButton>
+
           <Sidebar
             documents={documents}
             activeDocId={activeDocId}
@@ -992,7 +1012,9 @@ export default function App() {
           </section>
 
           <aside
-            className={`${styles.rail} ${mobileRailOpen ? styles.railMobileOpen : ""}`}
+            className={`${styles.rail} ${ui.railCollapsed ? styles.railCollapsed : ""} ${
+              mobileRailOpen ? styles.railMobileOpen : ""
+            }`}
             aria-label="本页导航与历史"
           >
             <div className={styles.railMobileHead}>
@@ -1053,6 +1075,18 @@ export default function App() {
               </Tabs.Content>
             </Tabs.Root>
           </aside>
+
+          <TooltipButton label={ui.railCollapsed ? "展开本页导航" : "收起本页导航"} side="left">
+            <button
+              className={`${styles.panelToggle} ${styles.panelToggleRight}`}
+              type="button"
+              aria-label={ui.railCollapsed ? "展开本页导航" : "收起本页导航"}
+              aria-pressed={!ui.railCollapsed}
+              onClick={() => setRailCollapsed(!ui.railCollapsed)}
+            >
+              <Icon name={ui.railCollapsed ? "panelExpandRight" : "panelCollapseRight"} size={14} />
+            </button>
+          </TooltipButton>
         </div>
 
         <SearchDialog
@@ -1139,12 +1173,20 @@ export default function App() {
   );
 }
 
-function TooltipButton({ label, children }: { label: string; children: React.ReactNode }) {
+function TooltipButton({
+  label,
+  side,
+  children,
+}: {
+  label: string;
+  side?: "top" | "right" | "bottom" | "left";
+  children: React.ReactNode;
+}) {
   return (
     <Tooltip.Root>
       <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
       <Tooltip.Portal>
-        <Tooltip.Content className={styles.tooltip} sideOffset={7}>
+        <Tooltip.Content className={styles.tooltip} side={side} sideOffset={7}>
           {label}
           <Tooltip.Arrow className={styles.tooltipArrow} />
         </Tooltip.Content>

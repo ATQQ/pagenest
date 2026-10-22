@@ -11,6 +11,10 @@ export type IconName =
   | "cup"
   | "contrast"
   | "display"
+  | "panelCollapseLeft"
+  | "panelExpandLeft"
+  | "panelCollapseRight"
+  | "panelExpandRight"
   | "file"
   | "folder"
   | "folderOpen"
@@ -80,6 +84,34 @@ const paths: Record<IconName, React.ReactNode> = {
     <>
       <rect x="3" y="4.5" width="18" height="12" rx="1.8" />
       <path d="M9 20.5h6M12 16.5v4" />
+    </>
+  ),
+  panelCollapseLeft: (
+    <>
+      <rect x="3" y="4.5" width="18" height="15" rx="2.2" />
+      <path d="M9.5 4.5v15" />
+      <path d="M13.2 9.6 10.8 12l2.4 2.4" />
+    </>
+  ),
+  panelExpandLeft: (
+    <>
+      <rect x="3" y="4.5" width="18" height="15" rx="2.2" />
+      <path d="M9.5 4.5v15" />
+      <path d="M10.8 9.6 13.2 12l-2.4 2.4" />
+    </>
+  ),
+  panelCollapseRight: (
+    <>
+      <rect x="3" y="4.5" width="18" height="15" rx="2.2" />
+      <path d="M14.5 4.5v15" />
+      <path d="M10.8 9.6 13.2 12l-2.4 2.4" />
+    </>
+  ),
+  panelExpandRight: (
+    <>
+      <rect x="3" y="4.5" width="18" height="15" rx="2.2" />
+      <path d="M14.5 4.5v15" />
+      <path d="M13.2 9.6 10.8 12l2.4 2.4" />
     </>
   ),
   file: (
