@@ -4,6 +4,8 @@ Welcome to the PageNest browser fixture. This opening paragraph is intentionally
 
 > A quiet place for local-first Markdown.
 
+![fixture lantern](assets/lantern.svg)
+
 ## Today
 
 - [x] Build the React workspace

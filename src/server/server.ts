@@ -17,9 +17,14 @@ const MAX_JSON_BYTES = 5 * 1024 * 1024;
 const TOKEN_COOKIE = "pagenest_token";
 
 const MIME_TYPES = new Map([
+  [".avif", "image/avif"],
+  [".bmp", "image/bmp"],
   [".css", "text/css; charset=utf-8"],
+  [".gif", "image/gif"],
   [".html", "text/html; charset=utf-8"],
   [".ico", "image/x-icon"],
+  [".jpeg", "image/jpeg"],
+  [".jpg", "image/jpeg"],
   [".js", "text/javascript; charset=utf-8"],
   [".json", "application/json; charset=utf-8"],
   [".map", "application/json; charset=utf-8"],
@@ -48,6 +53,7 @@ type ApiRoute =
   | { name: "restore"; docId: string; versionId: string }
   | { name: "versions"; docId: string }
   | { name: "document"; docId: string }
+  | { name: "asset"; docId: string }
   | {
       name: "documents" | "bootstrap" | "settings" | "search" | "events" | "health";
     };
@@ -105,7 +111,7 @@ function cookieValue(request: http.IncomingMessage, name: string): string {
 function securityHeaders(): Record<string, string> {
   return {
     "content-security-policy":
-      "default-src 'self'; base-uri 'none'; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'",
+      "default-src 'self'; base-uri 'none'; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data: blob: https:; script-src 'self'; style-src 'self' 'unsafe-inline'",
     "referrer-policy": "no-referrer",
     "x-content-type-options": "nosniff",
     "x-frame-options": "DENY",
@@ -186,6 +192,10 @@ async function serveStatic(
 }
 
 function apiRoute(pathname: string): ApiRoute | null {
+  const asset = pathname.match(/^\/api\/assets\/([^/]+)$/);
+  if (asset) {
+    return { name: "asset", docId: decodeURIComponent(asset[1]!) };
+  }
   const version = pathname.match(/^\/api\/docs\/([^/]+)\/versions\/([^/]+)$/);
   if (version) {
     return {
@@ -342,6 +352,21 @@ export async function createPageNestServer({
           doc: await library.requireDocument(route.docId),
           versions: await library.listVersions(route.docId),
         });
+        return;
+      }
+
+      if (route.name === "asset" && (request.method === "GET" || request.method === "HEAD")) {
+        const asset = await library.readAsset(route.docId, url.searchParams.get("path"));
+        const type =
+          MIME_TYPES.get(path.extname(asset.relativePath).toLowerCase()) ||
+          "application/octet-stream";
+        response.writeHead(200, {
+          "content-type": type,
+          "content-length": asset.content.length,
+          "cache-control": "no-cache",
+        });
+        if (request.method === "HEAD") response.end();
+        else response.end(asset.content);
         return;
       }
 

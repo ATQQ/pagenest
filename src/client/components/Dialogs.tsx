@@ -113,7 +113,7 @@ export function SearchDialog({ open, onOpenChange, onSelect }: SearchDialogProps
             <kbd>ESC</kbd>
           </div>
           <div className={styles.searchDialogHint}>
-            全文档搜索与左侧筛选相互独立；⌘/Ctrl + Enter 在新标签打开
+            支持多关键词与拼写容错；⌘/Ctrl + Enter 在新标签打开
           </div>
           <div className={styles.searchResults} role="listbox" aria-label="搜索结果">
             {loading ? <div className={styles.dialogEmpty}>正在翻找资料夹…</div> : null}
@@ -125,7 +125,7 @@ export function SearchDialog({ open, onOpenChange, onSelect }: SearchDialogProps
               <div className={styles.searchWelcome}>
                 <span className={styles.searchWelcomeMark}>⌕</span>
                 <strong>从整座资料夹里找一句话</strong>
-                <p>服务端会匹配标题、路径和正文，并返回命中的上下文。</p>
+                <p>按相关度匹配标题、路径和正文，支持多关键词、拼写错误和中文顺序命中。</p>
               </div>
             ) : null}
             {results.map((result, index) => (

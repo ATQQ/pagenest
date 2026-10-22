@@ -23,6 +23,15 @@ test("loads the React workspace without page errors", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("loads images relative to the current Markdown document", async ({ page }) => {
+  const image = page.getByRole("img", { name: "fixture lantern" });
+  await expect(image).toBeVisible();
+  await expect
+    .poll(() => image.evaluate((element) => (element as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
+  expect(await image.getAttribute("src")).toMatch(/^\/api\/assets\/d-/);
+});
+
 test("switches navigation modes, expands folders, and remembers the theme", async ({
   page,
 }, testInfo) => {
@@ -37,11 +46,18 @@ test("switches navigation modes, expands folders, and remembers the theme", asyn
   await page.getByRole("button", { name: "Architecture" }).click();
   await expect(page.getByRole("heading", { name: "Architecture", level: 1 })).toBeVisible();
 
-  await page.getByRole("button", { name: "切换深浅主题" }).click();
+  await page.getByRole("button", { name: /选择主题/ }).click();
+  await page.getByRole("menuitem", { name: /夜读/ }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "night");
   await page.reload();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "night");
-  await page.getByRole("button", { name: "切换深浅主题" }).click();
+  await page.getByRole("button", { name: /选择主题/ }).click();
+  await page.getByRole("menuitem", { name: /护眼/ }).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "eye");
+  await page.reload();
+  await expect(page.locator("html")).toHaveAttribute("data-theme", "eye");
+  await page.getByRole("button", { name: /选择主题/ }).click();
+  await page.getByRole("menuitem", { name: /纸页/ }).click();
 });
 
 test("top search is independent from the sidebar filter", async ({ page }) => {
@@ -58,7 +74,7 @@ test("top search is independent from the sidebar filter", async ({ page }) => {
 });
 
 test("favorites headings into the quick notes panel", async ({ page }) => {
-  await page.getByRole("button", { name: "收藏 Today" }).click({ force: true });
+  await page.getByRole("button", { name: "收藏 Today" }).click();
   await expect(page.getByRole("button", { name: /速记/ })).toContainText("1");
   await page.getByRole("button", { name: /速记/ }).click();
   await expect(page.getByRole("dialog")).toContainText("Today");
@@ -67,7 +83,7 @@ test("favorites headings into the quick notes panel", async ({ page }) => {
 test("edits a paragraph, saves, and shows the previous version in history", async ({
   page,
 }, testInfo) => {
-  await page.getByRole("button", { name: "编辑" }).click();
+  await page.getByRole("button", { name: "编辑文档" }).click();
   await page.getByText(/This opening paragraph/).click();
   const editor = page.getByRole("textbox", { name: "编辑内容块" });
   await editor.fill("The lantern paragraph was edited inside PageNest.");
@@ -85,19 +101,62 @@ test("edits a paragraph, saves, and shows the previous version in history", asyn
   await expect(page.getByRole("dialog")).toContainText("与「保存前快照」比较");
 });
 
+test("keeps heading typography stable while editing and exposes one edit control bar", async ({
+  page,
+}) => {
+  const heading = page.getByRole("heading", { name: "Lantern Notes", level: 1 });
+  const before = await heading.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      fontSize: style.fontSize,
+      lineHeight: style.lineHeight,
+      fontWeight: style.fontWeight,
+    };
+  });
+
+  await page.getByRole("button", { name: "编辑文档" }).click();
+  await expect(page.getByRole("group", { name: "编辑方式" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "取消更改" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /保存并返回/ })).toBeVisible();
+  await heading.click();
+
+  const editor = page.getByRole("textbox", { name: "编辑Lantern Notes" });
+  const after = await editor.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return {
+      fontSize: style.fontSize,
+      lineHeight: style.lineHeight,
+      fontWeight: style.fontWeight,
+    };
+  });
+  expect(after).toEqual(before);
+
+  await editor.fill("A temporary heading");
+  await page.locator('h1[contenteditable="true"]').press("Escape");
+  await expect(heading).toBeVisible();
+
+  await page.getByRole("button", { name: "Markdown 源码" }).click();
+  await expect(page.locator(".cm-content")).toBeVisible();
+  await page.getByRole("button", { name: "取消更改" }).click();
+  await expect(page.getByRole("button", { name: "编辑文档" })).toBeVisible();
+  await expect(heading).toBeVisible();
+});
+
 test("opens source mode with CodeMirror", async ({ page }) => {
-  await page.getByRole("button", { name: "源码" }).click();
+  await page.getByRole("button", { name: "编辑文档" }).click();
+  await page.getByRole("button", { name: "Markdown 源码" }).click();
   await expect(page.locator(".cm-content")).toContainText("Lantern Notes");
   await page.locator(".cm-content").click();
   await page.keyboard.press("ControlOrMeta+End");
   await page.keyboard.type("\n\nA source-mode sentence.");
   await page.keyboard.press("ControlOrMeta+s");
   await expect(page.getByRole("status")).toContainText("已保存");
-  await expect(page.locator(".cm-content")).toContainText("A source-mode sentence.");
+  await expect(page.getByText("A source-mode sentence.")).toBeVisible();
 });
 
 test("keeps source text readable in paper and night themes", async ({ page }) => {
-  await page.getByRole("button", { name: "源码" }).click();
+  await page.getByRole("button", { name: "编辑文档" }).click();
+  await page.getByRole("button", { name: "Markdown 源码" }).click();
   await expect(page.locator(".cm-content")).toBeVisible();
 
   const sourceContrast = () =>
@@ -128,10 +187,93 @@ test("keeps source text readable in paper and night themes", async ({ page }) =>
     });
 
   expect(await sourceContrast()).toBeGreaterThanOrEqual(7);
-  await page.getByRole("button", { name: "切换深浅主题" }).click();
+  await page.getByRole("button", { name: /选择主题/ }).click();
+  await page.getByRole("menuitem", { name: /夜读/ }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "night");
   await expect(page.locator(".cm-content")).toBeVisible();
   expect(await sourceContrast()).toBeGreaterThanOrEqual(7);
+});
+
+test("keeps fenced code readable across all themes", async ({ page }) => {
+  const codeAppearance = () =>
+    page.evaluate(() => {
+      const pre = document.querySelector<HTMLElement>("article pre");
+      const code = pre?.querySelector<HTMLElement>("code");
+      if (!pre || !code) throw new Error("Fenced code block is not available");
+
+      const channels = (color: string) =>
+        color
+          .match(/[\d.]+/g)
+          ?.slice(0, 3)
+          .map(Number);
+      const luminance = ([red, green, blue]: number[]) =>
+        [red, green, blue]
+          .map((value) => {
+            const channel = value! / 255;
+            return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+          })
+          .reduce((total, value, index) => total + value * [0.2126, 0.7152, 0.0722][index]!, 0);
+
+      const foreground = channels(getComputedStyle(code).color);
+      const background = channels(getComputedStyle(pre).backgroundColor);
+      if (!foreground || !background) throw new Error("Could not read fenced code colors");
+      const light = Math.max(luminance(foreground), luminance(background));
+      const dark = Math.min(luminance(foreground), luminance(background));
+      const tokenColors = Array.from(pre.querySelectorAll<HTMLElement>("span[style]"))
+        .map((token) => getComputedStyle(token).color)
+        .filter(Boolean);
+      const tokenContrasts = tokenColors
+        .map((color) => channels(color))
+        .filter((color): color is number[] => Boolean(color))
+        .map((color) => {
+          const tokenLight = Math.max(luminance(color), luminance(background));
+          const tokenDark = Math.min(luminance(color), luminance(background));
+          return (tokenLight + 0.05) / (tokenDark + 0.05);
+        });
+      return {
+        baseContrast: (light + 0.05) / (dark + 0.05),
+        colors: new Set(tokenColors).size,
+        minimumTokenContrast: Math.min(...tokenContrasts),
+      };
+    });
+
+  const assertReadable = (appearance: Awaited<ReturnType<typeof codeAppearance>>) => {
+    expect(appearance.baseContrast).toBeGreaterThanOrEqual(7);
+    expect(appearance.colors).toBeGreaterThanOrEqual(3);
+    expect(appearance.minimumTokenContrast).toBeGreaterThanOrEqual(4.5);
+  };
+
+  assertReadable(await codeAppearance());
+  await page.getByRole("button", { name: /选择主题/ }).click();
+  await page.getByRole("menuitem", { name: /护眼/ }).click();
+  assertReadable(await codeAppearance());
+  await page.getByRole("button", { name: /选择主题/ }).click();
+  await page.getByRole("menuitem", { name: /夜读/ }).click();
+  assertReadable(await codeAppearance());
+});
+
+test("keeps a consistent document rhythm around headings", async ({ page }) => {
+  const gaps = await page.evaluate(() => {
+    const blocks = Array.from(document.querySelectorAll<HTMLElement>("article [data-block-kind]"));
+    const gapBefore = (element: HTMLElement) => {
+      const previous = element.previousElementSibling as HTMLElement | null;
+      if (!previous) return 0;
+      return element.getBoundingClientRect().top - previous.getBoundingClientRect().bottom;
+    };
+    const heading = (level: string) =>
+      blocks.find((block) => block.dataset.blockLevel === level) as HTMLElement;
+    return {
+      paragraph: gapBefore(
+        blocks.find((block) => block.dataset.blockKind === "paragraph") as HTMLElement,
+      ),
+      h1: gapBefore(heading("1")),
+      h2: gapBefore(heading("2")),
+    };
+  });
+
+  expect(gaps.paragraph).toBeGreaterThanOrEqual(12);
+  expect(gaps.h1).toBe(0);
+  expect(gaps.h2).toBeGreaterThanOrEqual(32);
 });
 
 test("opens the mobile directory and page rail", async ({ page }, testInfo) => {
@@ -154,12 +296,11 @@ test("has no serious accessibility violations on the workspace", async ({ page }
 });
 
 test("keeps an unsaved draft when the page reloads", async ({ page }) => {
-  await page.getByRole("button", { name: "编辑" }).click();
+  await page.getByRole("button", { name: "编辑文档" }).click();
   await page.getByText(/This opening paragraph/).click();
   await page
     .getByRole("textbox", { name: "编辑内容块" })
     .fill("This draft survives a browser reload.");
-  await page.getByRole("button", { name: "完成" }).click();
   await page.reload();
   await expect(page.getByText("This draft survives a browser reload.")).toBeVisible();
   await expect(page.getByRole("tab", { name: "Lantern Notes" }).locator("i")).toBeVisible();
@@ -180,7 +321,7 @@ test("opens multiple documents in tabs and closes the active tab", async ({ page
 });
 
 test("shows conflict details and can load the disk version", async ({ page }) => {
-  await page.getByRole("button", { name: "编辑" }).click();
+  await page.getByRole("button", { name: "编辑文档" }).click();
   await page.getByText(/This opening paragraph/).click();
   await page
     .getByRole("textbox", { name: "编辑内容块" })
@@ -201,7 +342,7 @@ test("shows conflict details and can load the disk version", async ({ page }) =>
 });
 
 test("can deliberately keep the local draft on a disk conflict", async ({ page }) => {
-  await page.getByRole("button", { name: "编辑" }).click();
+  await page.getByRole("button", { name: "编辑文档" }).click();
   await page.getByText(/This opening paragraph/).click();
   await page
     .getByRole("textbox", { name: "编辑内容块" })

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="180" viewBox="0 0 480 180">
+  <rect width="480" height="180" rx="18" fill="#e4eddc"/>
+  <circle cx="92" cy="88" r="46" fill="#f6c96b"/>
+  <path d="M76 54h32M72 68h40M69 84h46M72 100h40M78 116h28" stroke="#8e5e2d" stroke-width="6" stroke-linecap="round"/>
+  <text x="176" y="80" fill="#2c3a2e" font-family="serif" font-size="30">Lantern Notes</text>
+  <text x="176" y="113" fill="#5a6858" font-family="sans-serif" font-size="17">Local image fixture</text>
+</svg>

@@ -52,6 +52,40 @@ test("serves bootstrap and saves a document through the API", async (t) => {
   assert.match(await fs.readFile(path.join(root, "README.md"), "utf8"), /through API/);
 });
 
+test("serves workspace-local images and blocks path traversal", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "pagenest-assets-"));
+  const outside = await fs.mkdtemp(path.join(os.tmpdir(), "pagenest-outside-"));
+  await fs.mkdir(path.join(root, "images"), { recursive: true });
+  await fs.writeFile(
+    path.join(root, "images", "lantern.svg"),
+    '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"></svg>\n',
+  );
+  await fs.writeFile(path.join(root, "README.md"), "# Home\n\n![Lantern](images/lantern.svg)\n");
+  await fs.writeFile(path.join(outside, "secret.svg"), "<svg></svg>\n");
+  const app = await start(root);
+  t.onTestFinished(async () => {
+    await new Promise((resolve) => app.server.close(resolve));
+    await fs.rm(root, { recursive: true, force: true });
+    await fs.rm(outside, { recursive: true, force: true });
+  });
+
+  const bootstrap = (await fetch(`${app.base}/api/bootstrap`).then((response) =>
+    response.json(),
+  )) as BootstrapResponse;
+  const document = bootstrap.documents[0]!;
+  const asset = await fetch(
+    `${app.base}/api/assets/${document.id}?path=${encodeURIComponent("images/lantern.svg")}`,
+  );
+  assert.equal(asset.status, 200);
+  assert.equal(asset.headers.get("content-type"), "image/svg+xml");
+  assert.match(await asset.text(), /<svg/);
+
+  const traversal = await fetch(
+    `${app.base}/api/assets/${document.id}?path=${encodeURIComponent("../secret.svg")}`,
+  );
+  assert.equal(traversal.status, 400);
+});
+
 test("requires the access token when configured", async (t) => {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), "pagenest-token-"));
   await fs.writeFile(path.join(root, "README.md"), "# Home\n");
@@ -244,4 +278,35 @@ test("returns bounded search snippets and line numbers", async (t) => {
   assert.equal(search.results.length, 1);
   assert.equal(search.results[0]!.line, 5);
   assert.match(search.results[0]!.snippet, /lantern phrase/);
+});
+
+test("supports multi-term and typo-tolerant search with relevance ranking", async (t) => {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "pagenest-fuzzy-search-"));
+  await fs.writeFile(
+    path.join(root, "README.md"),
+    "# Lantern Notes\n\nA quiet phrase lives by the garden.\n",
+  );
+  await fs.writeFile(
+    path.join(root, "garden.md"),
+    "# Garden Notes\n\nThe lantern phrase waits by the window.\n",
+  );
+  await fs.writeFile(path.join(root, "fuzzy.md"), "# 搜索设计\n\n页面支持模糊的全文搜索。\n");
+  const app = await start(root);
+  t.onTestFinished(async () => {
+    await new Promise((resolve) => app.server.close(resolve));
+    await fs.rm(root, { recursive: true, force: true });
+  });
+
+  const typoSearch = (await fetch(
+    `${app.base}/api/search?q=${encodeURIComponent("lantren phrase")}`,
+  ).then((response) => response.json())) as SearchResponse;
+  assert.deepEqual(
+    typoSearch.results.map((result) => result.title),
+    ["Lantern Notes", "Garden Notes"],
+  );
+
+  const orderedSearch = (await fetch(
+    `${app.base}/api/search?q=${encodeURIComponent("模糊搜索")}`,
+  ).then((response) => response.json())) as SearchResponse;
+  assert.equal(orderedSearch.results[0]!.title, "搜索设计");
 });

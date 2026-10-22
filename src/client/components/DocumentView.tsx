@@ -1,13 +1,27 @@
-import { useRef, useState } from "react";
+import {
+  useRef,
+  useState,
+  type FocusEvent as ReactFocusEvent,
+  type FormEvent as ReactFormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 
 import type { DocumentModel } from "../../shared/contracts";
 import type { DocumentBlock } from "../markdown/blocks";
-import { renderMarkdown } from "../markdown/render";
+import { MarkdownAssetProvider, renderMarkdown } from "../markdown/render";
 import type { Favorite } from "../store/workspace";
 import { Icon } from "./Icon";
 import styles from "../App.module.css";
 
 const richEditableKinds = new Set(["heading", "paragraph", "blockquote"]);
+const headingEditorClasses: Record<number, string> = {
+  1: styles.richEditorH1 ?? "",
+  2: styles.richEditorH2 ?? "",
+  3: styles.richEditorH3 ?? "",
+  4: styles.richEditorH4 ?? "",
+  5: styles.richEditorH5 ?? "",
+  6: styles.richEditorH6 ?? "",
+};
 
 function escapeHtml(value: string): string {
   return value.replace(
@@ -110,6 +124,7 @@ interface BlockViewProps {
   favorite: boolean;
   highlighted: boolean;
   onStartEdit: (block: DocumentBlock) => void;
+  onDraftChange: (block: DocumentBlock, markdown: string) => void;
   onCommit: (block: DocumentBlock, markdown: string) => void;
   onToggleFavorite: (block: DocumentBlock) => void;
 }
@@ -121,26 +136,78 @@ function BlockView({
   favorite,
   highlighted,
   onStartEdit,
+  onDraftChange,
   onCommit,
   onToggleFavorite,
 }: BlockViewProps) {
-  const editorRef = useRef<HTMLElement | null>(null);
   const sourceRef = useRef<HTMLTextAreaElement | null>(null);
   const committedRef = useRef(false);
   const sourceCommittedRef = useRef(false);
+  const [originalMarkdown] = useState(block.markdown);
   const [source, setSource] = useState(block.markdown);
+  const [initialHtml] = useState(() => editableHtml(block));
   const rich = richEditableKinds.has(block.kind);
 
-  function commitRich() {
-    if (!editing || !rich || committedRef.current || !editorRef.current) return;
+  function commitRich(element: HTMLElement) {
+    if (!editing || !rich || committedRef.current) return;
     committedRef.current = true;
-    onCommit(block, commitRichBlock(block, editorRef.current));
+    onCommit(block, commitRichBlock(block, element));
   }
 
   function commitSource() {
     if (!editing || rich || sourceCommittedRef.current) return;
     sourceCommittedRef.current = true;
     onCommit(block, source.trim());
+  }
+
+  function handleRichKeyDown(event: ReactKeyboardEvent<HTMLElement>) {
+    if (event.key === "Escape") {
+      committedRef.current = true;
+      onCommit(block, originalMarkdown);
+    }
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      commitRich(event.currentTarget);
+    }
+  }
+
+  const headingLevel = Math.min(6, Math.max(1, block.level || 1));
+  const richEditorTag =
+    block.kind === "heading"
+      ? (`h${headingLevel}` as "h1" | "h2" | "h3" | "h4" | "h5" | "h6")
+      : block.kind === "blockquote"
+        ? "blockquote"
+        : "p";
+  const richEditorProps = {
+    className: `${styles.richEditor} ${
+      block.kind === "heading"
+        ? headingEditorClasses[headingLevel]
+        : block.kind === "blockquote"
+          ? styles.richEditorQuote
+          : styles.richEditorParagraph
+    }`,
+    contentEditable: true,
+    suppressContentEditableWarning: true,
+    role: "textbox",
+    "aria-multiline": block.kind !== "heading",
+    "aria-label": block.kind === "heading" ? `编辑${block.headingText || "标题"}` : "编辑内容块",
+    dangerouslySetInnerHTML: { __html: initialHtml },
+    onBlur: (event: ReactFocusEvent<HTMLElement>) => commitRich(event.currentTarget),
+    onInput: (event: ReactFormEvent<HTMLElement>) => {
+      if (!committedRef.current) {
+        onDraftChange(block, commitRichBlock(block, event.currentTarget));
+      }
+    },
+    onKeyDown: handleRichKeyDown,
+  };
+  let richEditor;
+  if (block.kind === "heading") {
+    const HeadingTag = richEditorTag as "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+    richEditor = <HeadingTag {...richEditorProps} />;
+  } else if (block.kind === "blockquote") {
+    richEditor = <blockquote {...richEditorProps} />;
+  } else {
+    richEditor = <p {...richEditorProps} />;
   }
 
   const wrapperClass = `${styles.block} ${editMode ? styles.blockEditable : ""} ${
@@ -152,6 +219,8 @@ function BlockView({
       id={block.id}
       className={wrapperClass}
       data-block-index={block.index}
+      data-block-kind={block.kind}
+      data-block-level={block.level}
       onClick={() => {
         if (editMode && !editing) onStartEdit(block);
       }}
@@ -172,58 +241,7 @@ function BlockView({
       ) : null}
 
       {editing && rich ? (
-        block.kind === "heading" ? (
-          <div
-            ref={(node) => {
-              editorRef.current = node;
-            }}
-            className={styles.richEditor}
-            contentEditable
-            suppressContentEditableWarning
-            role="textbox"
-            aria-label={`编辑${block.headingText || "标题"}`}
-            dangerouslySetInnerHTML={{ __html: editableHtml(block) }}
-            onBlur={commitRich}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                committedRef.current = true;
-                onCommit(block, block.markdown);
-              }
-              if (event.metaKey || event.ctrlKey) {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  commitRich();
-                }
-              }
-            }}
-          />
-        ) : (
-          <div
-            ref={(node) => {
-              editorRef.current = node;
-            }}
-            className={`${styles.richEditor} ${
-              block.kind === "blockquote" ? styles.richEditorQuote : ""
-            }`}
-            contentEditable
-            suppressContentEditableWarning
-            role="textbox"
-            aria-multiline
-            aria-label="编辑内容块"
-            dangerouslySetInnerHTML={{ __html: editableHtml(block) }}
-            onBlur={commitRich}
-            onKeyDown={(event) => {
-              if (event.key === "Escape") {
-                committedRef.current = true;
-                onCommit(block, block.markdown);
-              }
-              if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-                event.preventDefault();
-                commitRich();
-              }
-            }}
-          />
-        )
+        richEditor
       ) : editing && !rich ? (
         <div className={styles.blockSourceEditor}>
           <div className={styles.blockSourceLabel}>
@@ -242,7 +260,7 @@ function BlockView({
             onKeyDown={(event) => {
               if (event.key === "Escape") {
                 sourceCommittedRef.current = true;
-                onCommit(block, block.markdown);
+                onCommit(block, originalMarkdown);
               }
               if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
                 event.preventDefault();
@@ -252,7 +270,7 @@ function BlockView({
             aria-label="编辑 Markdown 片段"
           />
           <div className={styles.blockSourceActions}>
-            <button type="button" onClick={() => onCommit(block, block.markdown)}>
+            <button type="button" onClick={() => onCommit(block, originalMarkdown)}>
               取消
             </button>
             <button className={styles.smallPrimary} type="button" onClick={commitSource}>
@@ -276,11 +294,13 @@ interface ArticleProps {
   favorites: Favorite[];
   highlightLine: number | null;
   onStartEdit: (block: DocumentBlock) => void;
+  onDraftChange: (block: DocumentBlock, markdown: string) => void;
   onCommitBlock: (block: DocumentBlock, markdown: string) => void;
   onToggleFavorite: (block: DocumentBlock) => void;
 }
 
 export function Article({
+  doc,
   markdown,
   blocks,
   editMode,
@@ -288,36 +308,40 @@ export function Article({
   favorites,
   highlightLine,
   onStartEdit,
+  onDraftChange,
   onCommitBlock,
   onToggleFavorite,
 }: ArticleProps) {
   const favoriteIds = new Set(favorites.map((favorite) => favorite.id));
   return (
-    <article className={styles.article} aria-label="文档正文">
-      {blocks.map((block) => (
-        <BlockView
-          key={`${block.id}:${editingBlockId === block.id ? "editing" : "reading"}`}
-          block={block}
-          editMode={editMode}
-          editing={editingBlockId === block.id}
-          favorite={Boolean(block.headingId && favoriteIds.has(block.headingId))}
-          highlighted={Boolean(
-            highlightLine && highlightLine >= block.startLine && highlightLine <= block.endLine,
-          )}
-          onStartEdit={onStartEdit}
-          onCommit={onCommitBlock}
-          onToggleFavorite={onToggleFavorite}
-        />
-      ))}
-      {!blocks.length && markdown.trim() ? (
-        <div className={styles.sourceFallback}>{markdown}</div>
-      ) : null}
-      {!markdown.trim() ? (
-        <div className={styles.emptyDocument}>
-          <span>空白页</span>
-          <p>进入编辑模式，点击这里开始写。</p>
-        </div>
-      ) : null}
-    </article>
+    <MarkdownAssetProvider document={doc}>
+      <article className={styles.article} aria-label="文档正文">
+        {blocks.map((block) => (
+          <BlockView
+            key={`${block.index}:${editingBlockId === String(block.index) ? "editing" : "reading"}`}
+            block={block}
+            editMode={editMode}
+            editing={editingBlockId === String(block.index)}
+            favorite={Boolean(block.headingId && favoriteIds.has(block.headingId))}
+            highlighted={Boolean(
+              highlightLine && highlightLine >= block.startLine && highlightLine <= block.endLine,
+            )}
+            onStartEdit={onStartEdit}
+            onDraftChange={onDraftChange}
+            onCommit={onCommitBlock}
+            onToggleFavorite={onToggleFavorite}
+          />
+        ))}
+        {!blocks.length && markdown.trim() ? (
+          <div className={styles.sourceFallback}>{markdown}</div>
+        ) : null}
+        {!markdown.trim() ? (
+          <div className={styles.emptyDocument}>
+            <span>空白页</span>
+            <p>进入编辑模式，点击这里开始写。</p>
+          </div>
+        ) : null}
+      </article>
+    </MarkdownAssetProvider>
   );
 }

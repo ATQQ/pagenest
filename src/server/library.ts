@@ -17,9 +17,46 @@ import type {
 } from "../shared/contracts.js";
 
 const DOCUMENT_EXTENSIONS = new Set([".md", ".markdown", ".mdown"]);
+const ASSET_EXTENSIONS = new Set([
+  ".avif",
+  ".bmp",
+  ".gif",
+  ".ico",
+  ".jpeg",
+  ".jpg",
+  ".png",
+  ".svg",
+  ".webp",
+]);
 const HARD_IGNORED_DIRECTORIES = new Set([".git", ".pagenest"]);
 const VERSION_LIMIT = 200;
 const MAX_DOCUMENTS = 20_000;
+const MAX_ASSET_BYTES = 32 * 1024 * 1024;
+const MAX_SEARCH_RESULTS = 100;
+
+const SEARCH_FIELDS = [
+  { key: "title", weight: 120 },
+  { key: "path", weight: 90 },
+  { key: "markdown", weight: 55 },
+] as const;
+
+type SearchField = (typeof SEARCH_FIELDS)[number]["key"];
+type MatchKind = "exact" | "typo" | "ordered";
+
+interface FieldMatch {
+  field: SearchField;
+  index: number;
+  length: number;
+  kind: MatchKind;
+  distance: number;
+  score: number;
+}
+
+interface SearchIndexDocument {
+  doc: DocumentModel;
+  fields: Record<SearchField, string>;
+  words: Record<SearchField, Array<{ text: string; index: number }>>;
+}
 
 interface LibraryOptions {
   ignorePatterns?: unknown;
@@ -34,6 +71,11 @@ interface SaveDocumentOptions {
   baseHash?: string;
   force?: boolean;
   reason?: string;
+}
+
+interface DocumentAsset {
+  content: Buffer;
+  relativePath: string;
 }
 
 export class PageNestError extends Error {
@@ -98,6 +140,132 @@ function versionId(): string {
   return `v-${Date.now().toString(36)}-${crypto.randomBytes(4).toString("hex")}`;
 }
 
+function searchTerms(query: unknown): string[] {
+  return String(query || "")
+    .trim()
+    .toLocaleLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function wordSpans(value: string): Array<{ text: string; index: number }> {
+  return Array.from(value.matchAll(/[\p{Script=Latin}\p{N}_-]+/gu), (match) => ({
+    text: match[0].toLocaleLowerCase(),
+    index: match.index,
+  }));
+}
+
+function uniqueWordSpans(value: string): Array<{ text: string; index: number }> {
+  const seen = new Set<string>();
+  const words: Array<{ text: string; index: number }> = [];
+  for (const word of wordSpans(value)) {
+    if (seen.has(word.text)) continue;
+    seen.add(word.text);
+    words.push(word);
+  }
+  return words;
+}
+
+function typoDistanceLimit(term: string): number {
+  if (term.length < 3) return 0;
+  return term.length >= 9 ? 2 : 1;
+}
+
+function damerauLevenshtein(left: string, right: string, limit: number): number {
+  const a = Array.from(left);
+  const b = Array.from(right);
+  if (Math.abs(a.length - b.length) > limit) return limit + 1;
+
+  let previousPrevious: number[] | null = null;
+  let previous = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let i = 1; i <= a.length; i += 1) {
+    const current = [i];
+    for (let j = 1; j <= b.length; j += 1) {
+      const substitution = previous[j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1);
+      let value = Math.min(previous[j]! + 1, current[j - 1]! + 1, substitution);
+      if (previousPrevious && i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        value = Math.min(value, previousPrevious[j - 2]! + 1);
+      }
+      current[j] = value;
+    }
+    previousPrevious = previous;
+    previous = current;
+  }
+  return previous[b.length]!;
+}
+
+function findOrderedMatch(value: string, term: string): { index: number; length: number } | null {
+  if (Array.from(term).length < 3) return null;
+  let cursor = 0;
+  let first = -1;
+  let last = -1;
+  for (let index = 0; index < value.length && cursor < term.length; index += 1) {
+    if (value[index] !== term[cursor]) continue;
+    if (first < 0) first = index;
+    last = index;
+    cursor += 1;
+  }
+  if (cursor < term.length || first < 0) return null;
+  const maxSpan = Math.max(40, Array.from(term).length * 10);
+  if (last - first + 1 > maxSpan) return null;
+  return { index: first, length: last - first + 1 };
+}
+
+function findFieldMatch(
+  lowerValue: string,
+  field: SearchField,
+  fieldWeight: number,
+  term: string,
+  words: Array<{ text: string; index: number }>,
+): FieldMatch | null {
+  const exactIndex = lowerValue.indexOf(term);
+  if (exactIndex >= 0) {
+    return {
+      field,
+      index: exactIndex,
+      length: term.length,
+      kind: "exact",
+      distance: 0,
+      score: fieldWeight + 80,
+    };
+  }
+
+  const typoLimit = typoDistanceLimit(term);
+  if (typoLimit && /^[\p{Script=Latin}\p{N}_-]+$/u.test(term)) {
+    let best: FieldMatch | null = null;
+    for (const word of words) {
+      if (Math.abs(word.text.length - term.length) > typoLimit) continue;
+      const distance = damerauLevenshtein(term, word.text, typoLimit);
+      if (distance > typoLimit) continue;
+      const score = fieldWeight * 0.65 + 42 - distance * 8;
+      if (!best || score > best.score) {
+        best = {
+          field,
+          index: word.index,
+          length: word.text.length,
+          kind: "typo",
+          distance,
+          score,
+        };
+      }
+      if (distance === 1) break;
+    }
+    if (best) return best;
+  }
+
+  const ordered = findOrderedMatch(lowerValue, term);
+  if (!ordered) return null;
+  return {
+    field,
+    index: ordered.index,
+    length: ordered.length,
+    kind: "ordered",
+    distance: 0,
+    score: fieldWeight * 0.45 + 15,
+  };
+}
+
 export function isLoopbackHost(host: string): boolean {
   return ["127.0.0.1", "::1", "localhost"].includes(host);
 }
@@ -131,6 +299,7 @@ export class Library {
   readonly historyDirectory: string;
   readonly settingsPath: string;
   readonly cliIgnorePatterns: string[];
+  private searchIndex: SearchIndexDocument[] | null = null;
 
   static async open(
     rootDirectory: string,
@@ -150,6 +319,33 @@ export class Library {
     this.historyDirectory = path.join(this.stateDirectory, "history");
     this.settingsPath = path.join(this.stateDirectory, "settings.json");
     this.cliIgnorePatterns = normalizeIgnorePatterns(ignorePatterns);
+  }
+
+  private createSearchIndex(documents: DocumentModel[]): SearchIndexDocument[] {
+    return documents.map((doc) => ({
+      doc,
+      fields: {
+        title: doc.title.toLocaleLowerCase(),
+        path: doc.path.toLocaleLowerCase(),
+        markdown: doc.markdown.toLocaleLowerCase(),
+      },
+      words: {
+        title: uniqueWordSpans(doc.title),
+        path: uniqueWordSpans(doc.path),
+        markdown: uniqueWordSpans(doc.markdown),
+      },
+    }));
+  }
+
+  private invalidateSearchIndex(): void {
+    this.searchIndex = null;
+  }
+
+  private async getSearchIndex(): Promise<SearchIndexDocument[]> {
+    if (!this.searchIndex) {
+      this.searchIndex = this.createSearchIndex(await this.scanDocuments());
+    }
+    return this.searchIndex;
   }
 
   normalizeDocumentPath(
@@ -281,6 +477,7 @@ export class Library {
       this.settingsPath,
       `${JSON.stringify({ version: 1, ignorePatterns: normalized }, null, 2)}\n`,
     );
+    this.invalidateSearchIndex();
     return this.getSettings();
   }
 
@@ -350,6 +547,73 @@ export class Library {
       throw new PageNestError(404, "DOCUMENT_NOT_FOUND", "The document no longer exists.");
     }
     return document;
+  }
+
+  async readAsset(docId: string, input: unknown): Promise<DocumentAsset> {
+    const document = await this.requireDocument(docId);
+    let requestedPath = String(input || "")
+      .trim()
+      .replaceAll("\\", "/");
+    if (!requestedPath || requestedPath.includes("\0")) {
+      throw new PageNestError(400, "INVALID_ASSET_PATH", "An asset path is required.");
+    }
+
+    const rootRelative = requestedPath.startsWith("/");
+    requestedPath = requestedPath.replace(/^\/+/, "");
+    const joinedPath = rootRelative
+      ? requestedPath
+      : path.posix.join(path.posix.dirname(document.path), requestedPath);
+    const relativePath = path.posix.normalize(joinedPath);
+    if (
+      relativePath === "." ||
+      relativePath === ".." ||
+      relativePath.startsWith("../") ||
+      path.posix.isAbsolute(relativePath)
+    ) {
+      throw new PageNestError(400, "INVALID_ASSET_PATH", "Asset path escapes the library root.");
+    }
+
+    const segments = relativePath.split("/");
+    if (
+      segments.some((segment) => !segment || segment === "." || segment === "..") ||
+      segments.some((segment) => HARD_IGNORED_DIRECTORIES.has(segment))
+    ) {
+      throw new PageNestError(400, "INVALID_ASSET_PATH", "Asset path is not allowed.");
+    }
+    if (!ASSET_EXTENSIONS.has(path.posix.extname(relativePath).toLowerCase())) {
+      throw new PageNestError(415, "UNSUPPORTED_ASSET", "This asset type is not supported.");
+    }
+
+    const { matcher } = await this.ignoreContext();
+    if (matcher.isIgnored(relativePath)) {
+      throw new PageNestError(404, "ASSET_NOT_FOUND", "The asset was not found.");
+    }
+
+    const absolute = path.resolve(this.root, ...relativePath.split("/"));
+    let realPath: string;
+    try {
+      realPath = await fs.realpath(absolute);
+    } catch (error) {
+      if (errorCode(error) === "ENOENT") {
+        throw new PageNestError(404, "ASSET_NOT_FOUND", "The asset was not found.");
+      }
+      throw error;
+    }
+    if (realPath !== this.root && !realPath.startsWith(`${this.root}${path.sep}`)) {
+      throw new PageNestError(400, "INVALID_ASSET_PATH", "Asset path escapes the library root.");
+    }
+
+    const stat = await fs.stat(realPath);
+    if (!stat.isFile()) {
+      throw new PageNestError(404, "ASSET_NOT_FOUND", "The asset was not found.");
+    }
+    if (stat.size > MAX_ASSET_BYTES) {
+      throw new PageNestError(413, "ASSET_TOO_LARGE", "The asset is too large.");
+    }
+    return {
+      content: await fs.readFile(realPath),
+      relativePath,
+    };
   }
 
   historyPath(docId: string): string {
@@ -470,6 +734,7 @@ export class Library {
       textLength(markdown) - textLength(current.markdown),
     );
     await atomicWrite(absolute, markdown);
+    this.invalidateSearchIndex();
     const doc = await this.requireDocument(id);
     return {
       doc,
@@ -510,6 +775,7 @@ export class Library {
       .trim();
     const content = String(markdown || `# ${safeTitle || "Untitled"}\n\n从这里开始写。\n`);
     await atomicWrite(absolute, content);
+    this.invalidateSearchIndex();
     const doc = await this.requireDocument(documentIdForPath(relativePath));
     await this.snapshot(doc.id, content, "创建文档", 0);
     return {
@@ -534,6 +800,7 @@ export class Library {
 
     await this.snapshot(id, doc.markdown, "恢复前自动存档", 0);
     await atomicWrite(this.absolutePath(doc.path), version.markdown);
+    this.invalidateSearchIndex();
     return {
       doc: await this.requireDocument(id),
       versions: await this.listVersions(id),
@@ -543,42 +810,77 @@ export class Library {
   }
 
   async search(query: unknown): Promise<SearchResult[]> {
-    const needle = String(query || "")
-      .trim()
-      .toLowerCase();
-    if (!needle) return [];
-    const documents = await this.scanDocuments();
-    return documents
-      .filter((doc) => `${doc.title} ${doc.path} ${doc.markdown}`.toLowerCase().includes(needle))
-      .map((doc) => {
-        const candidates = [
-          { value: doc.title, line: 1 },
-          { value: doc.path, line: 1 },
-          { value: doc.markdown, line: 0 },
-        ];
-        const match =
-          candidates.find((candidate) => candidate.value.toLowerCase().includes(needle)) ??
-          candidates[0]!;
-        const lowerValue = match.value.toLowerCase();
-        const index = lowerValue.indexOf(needle);
-        const line = match.line || match.value.slice(0, Math.max(index, 0)).split("\n").length;
-        const start = Math.max(0, index - 48);
-        const end = Math.min(match.value.length, index + needle.length + 80);
-        const snippet = match.value.slice(start, end).replace(/\s+/g, " ").trim();
-        return {
-          id: doc.id,
-          path: doc.path,
+    const terms = searchTerms(query);
+    if (!terms.length) return [];
+    const phrase = terms.join(" ");
+    const index = await this.getSearchIndex();
+    return index
+      .map(({ doc, fields, words }) => {
+        const values: Record<SearchField, string> = {
           title: doc.title,
-          updatedAt: doc.updatedAt,
-          hash: doc.hash,
-          snippet: `${start > 0 ? "…" : ""}${snippet}${end < match.value.length ? "…" : ""}`,
-          line,
+          path: doc.path,
+          markdown: doc.markdown,
         };
-      });
+        const matches: FieldMatch[] = [];
+        for (const term of terms) {
+          let best: FieldMatch | null = null;
+          for (const field of SEARCH_FIELDS) {
+            const match = findFieldMatch(
+              fields[field.key],
+              field.key,
+              field.weight,
+              term,
+              words[field.key],
+            );
+            if (match && (!best || match.score > best.score)) best = match;
+          }
+          if (best) matches.push(best);
+        }
+
+        const requiredTerms = terms.length <= 2 ? 1 : Math.ceil(terms.length * 0.6);
+        if (matches.length < requiredTerms) return null;
+        const strongest = matches.reduce((best, match) =>
+          match.score > best.score ? match : best,
+        );
+        const lowerCombined = `${doc.title} ${doc.path} ${doc.markdown}`.toLocaleLowerCase();
+        const phraseBonus = lowerCombined.includes(phrase) ? 220 : 0;
+        const allTermsBonus = matches.length === terms.length ? 110 : 0;
+        const score =
+          matches.reduce((total, match) => total + match.score, 0) + phraseBonus + allTermsBonus;
+
+        const value = values[strongest.field];
+        const start = Math.max(0, strongest.index - 48);
+        const end = Math.min(value.length, strongest.index + strongest.length + 80);
+        const snippet = value.slice(start, end).replace(/\s+/g, " ").trim();
+        const line =
+          strongest.field === "markdown" ? value.slice(0, strongest.index).split("\n").length : 1;
+        return {
+          score,
+          result: {
+            id: doc.id,
+            path: doc.path,
+            title: doc.title,
+            updatedAt: doc.updatedAt,
+            hash: doc.hash,
+            snippet: `${start > 0 ? "…" : ""}${snippet}${end < value.length ? "…" : ""}`,
+            line,
+          } satisfies SearchResult,
+        };
+      })
+      .filter((entry): entry is { score: number; result: SearchResult } => entry !== null)
+      .sort(
+        (left, right) =>
+          right.score - left.score ||
+          right.result.updatedAt - left.result.updatedAt ||
+          left.result.title.localeCompare(right.result.title, "zh-CN"),
+      )
+      .slice(0, MAX_SEARCH_RESULTS)
+      .map((entry) => entry.result);
   }
 
   async bootstrap(): Promise<BootstrapResponse> {
     const documents = await this.scanDocuments();
+    this.searchIndex = this.createSearchIndex(documents);
     const versions = Object.fromEntries(
       await Promise.all(documents.map(async (doc) => [doc.id, await this.listVersions(doc.id)])),
     );

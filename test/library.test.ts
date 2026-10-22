@@ -90,6 +90,24 @@ test("saves atomically, snapshots the previous version, and restores it", async 
   assert.equal(restored.versions[0]!.reason, "恢复前自动存档");
 });
 
+test("refreshes the in-memory search index after writes and rescans", async (t) => {
+  const root = await fixture();
+  t.onTestFinished(() => fs.rm(root, { recursive: true, force: true }));
+  const library = await Library.open(root);
+  const document = (await library.scanDocuments()).find((item) => item.path === "README.md")!;
+
+  assert.equal((await library.search("First")).length, 1);
+  await library.saveDocument(document.id, "# Home\n\nSecond copy.\n", {
+    baseHash: document.hash,
+  });
+  assert.equal((await library.search("First")).length, 0);
+  assert.equal((await library.search("Second")).length, 1);
+
+  await fs.writeFile(path.join(root, document.path), "# Home\n\nExternal phrase.\n");
+  await library.bootstrap();
+  assert.equal((await library.search("External")).length, 1);
+});
+
 test("creates nested Markdown documents", async (t) => {
   const root = await fixture();
   t.onTestFinished(() => fs.rm(root, { recursive: true, force: true }));

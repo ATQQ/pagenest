@@ -37,6 +37,7 @@
 | 基础组件   | Radix Dialog、AlertDialog、Tabs、DropdownMenu、Tooltip、ScrollArea              |
 | 样式       | CSS Variables + CSS Modules，保留暖纸/夜读视觉                                  |
 | Markdown   | unified、remark-parse、remark-gfm、remark-rehype、rehype-react、rehype-sanitize |
+| 代码高亮   | Shiki core + JavaScript 正则引擎，只打包常用语言与高对比度明暗主题              |
 | 源码编辑器 | CodeMirror 6，动态导入                                                          |
 | Diff       | `diff 9.0.0`                                                                    |
 
@@ -193,6 +194,7 @@ unified 管线把正文解析为带 source offset 的顶层块：
 - 标题、段落和引用使用 `contenteditable` 原地编辑，DOM 再转回 Markdown。
 - 列表、任务、表格、代码等无法稳定富文本化的块进入 Markdown 片段编辑。
 - 富文本失焦、`Esc` 或 `⌘/Ctrl+Enter` 都通过同一 commit 路径更新草稿。
+- 代码围栏由 Shiki 同步高亮，输出明暗双主题 token；不额外加载 WASM。
 - 整篇源码模式只在开启时动态加载 CodeMirror，支持 Markdown 高亮、search、history 与 `⌘/Ctrl+S`。
 - `⌘/Ctrl+S` 会先提交当前活动块，再保存，避免编辑 DOM 与 Zustand 草稿短暂不一致。
 
@@ -227,6 +229,12 @@ Markdown 渲染经过 `rehype-sanitize`。当前 GFM 范围不包括公式、Mer
   }
 }
 ```
+
+搜索按标题、路径和正文加权排序，支持空格分隔的多关键词、拉丁词拼写容错、中文
+字符顺序命中以及前缀/子串匹配。精确命中优先，其次补充模糊结果；单次最多返回
+100 篇文档，避免宽泛查询淹没工作区。`bootstrap` 会构建包含小写字段和去重词表的
+内存搜索快照，保存、创建、恢复、忽略规则变更与重新扫描时失效，避免每次输入都
+重新读取整个资料夹。
 
 SSE 使用类型化事件：
 

@@ -1,3 +1,4 @@
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as Tabs from "@radix-ui/react-tabs";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import {
@@ -28,7 +29,7 @@ import {
   RestoreDialog,
   SearchDialog,
 } from "./components/Dialogs";
-import { Icon } from "./components/Icon";
+import { Icon, type IconName } from "./components/Icon";
 import { Sidebar } from "./components/Sidebar";
 import { SourceEditor } from "./components/SourceEditor";
 import {
@@ -58,16 +59,27 @@ interface ConflictDetails {
 
 interface EditorSession {
   docId: string | null;
-  editMode: boolean;
-  sourceMode: boolean;
+  mode: EditorMode;
   editingBlockId: string | null;
 }
 
+type EditorMode = "read" | "rich" | "source";
+
 const closedEditorSession: Omit<EditorSession, "docId"> = {
-  editMode: false,
-  sourceMode: false,
+  mode: "read",
   editingBlockId: null,
 };
+
+const themeOptions: Array<{
+  value: "paper" | "eye" | "night";
+  label: string;
+  description: string;
+  icon: IconName;
+}> = [
+  { value: "paper", label: "纸页", description: "温暖米白", icon: "sun" },
+  { value: "eye", label: "护眼", description: "柔和草绿", icon: "leaf" },
+  { value: "night", label: "夜读", description: "低亮暖黑", icon: "moon" },
+];
 
 const toolbarCommands: Array<{
   command: string;
@@ -143,7 +155,12 @@ export default function App() {
   });
   const editorSession =
     editor.docId === activeDocId ? editor : { docId: activeDocId, ...closedEditorSession };
-  const { editMode, sourceMode, editingBlockId } = editorSession;
+  const { mode, editingBlockId } = editorSession;
+  const richMode = mode === "rich";
+  const sourceMode = mode === "source";
+  const editing = mode !== "read";
+  const activeDirty = Boolean(activeDoc && isDocumentDirty(activeDoc, drafts[activeDoc.id]));
+  const activeTheme = themeOptions.find((option) => option.value === ui.theme) ?? themeOptions[0]!;
   const [highlightLine, setHighlightLine] = useState<number | null>(null);
   const [pendingCloseId, setPendingCloseId] = useState<string | null>(null);
   const [pendingRestore, setPendingRestore] = useState<VersionDetail | null>(null);
@@ -271,12 +288,8 @@ export default function App() {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
         if (!activeDoc) return;
-        if (target?.matches("textarea, [contenteditable='true']")) {
-          target.blur();
-          window.setTimeout(() => void saveActiveDocument(), 0);
-        } else {
-          void saveActiveDocument();
-        }
+        if (editing) void saveAndFinishEditing();
+        else void saveActiveDocument();
       }
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
@@ -402,8 +415,47 @@ export default function App() {
     updateEditor({ editingBlockId: null });
   }
 
+  function changeBlockDraft(block: DocumentBlock, nextMarkdown: string) {
+    if (!activeDoc || nextMarkdown === block.markdown) return;
+    setDraft(activeDoc.id, replaceBlockSource(markdown, block, nextMarkdown));
+  }
+
   function updateEditor(patch: Partial<Omit<EditorSession, "docId">>) {
     setEditor({ ...editorSession, ...patch, docId: activeDocId });
+  }
+
+  function beginEditing() {
+    if (!activeDoc) return;
+    updateEditor({ mode: "rich", editingBlockId: null });
+  }
+
+  function switchEditorMode(nextMode: Exclude<EditorMode, "read">) {
+    if (!activeDoc || nextMode === mode) return;
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) activeElement.blur();
+    updateEditor({ mode: nextMode, editingBlockId: null });
+  }
+
+  function cancelEditing() {
+    if (!activeDoc) return;
+    discardDraft(activeDoc.id);
+    updateEditor({ mode: "read", editingBlockId: null });
+    showToast("已取消本次修改");
+  }
+
+  async function saveAndFinishEditing() {
+    if (!activeDoc) return;
+    const docId = activeDoc.id;
+    const activeElement = document.activeElement;
+    if (activeElement instanceof HTMLElement) activeElement.blur();
+
+    // Let contenteditable blur handlers fold the current block back into the draft first.
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+    const saved = await saveDocumentById(docId);
+    if (!saved) return;
+    setEditor((current) =>
+      current.docId === docId ? { docId, mode: "read", editingBlockId: null } : current,
+    );
   }
 
   function executeToolbarCommand(event: ReactMouseEvent<HTMLButtonElement>, command: string) {
@@ -590,57 +642,69 @@ export default function App() {
               }`}
               aria-live="polite"
             >
-              {saving
-                ? "保存中"
-                : activeDoc && isDocumentDirty(activeDoc, drafts[activeDoc.id])
-                  ? "未保存"
-                  : "已保存"}
+              {saving ? "保存中" : activeDirty ? "未保存" : "已保存"}
             </span>
-            <TooltipButton label="整篇 Markdown 源码">
+            {editing ? (
+              <span className={styles.modeLive} aria-live="polite">
+                <i />
+                {sourceMode ? "源码编辑中" : "富文本编辑中"}
+              </span>
+            ) : (
               <button
-                className={`${styles.ghostButton} ${styles.sourceButton} ${
-                  sourceMode ? styles.buttonActive : ""
-                }`}
+                className={styles.primaryButton}
                 type="button"
-                aria-label="源码"
-                aria-pressed={sourceMode}
-                onClick={() => {
-                  updateEditor({
-                    sourceMode: !sourceMode,
-                    editMode: false,
-                    editingBlockId: null,
-                  });
-                }}
+                aria-label="编辑文档"
+                onClick={beginEditing}
+                disabled={!activeDoc}
               >
-                <Icon name="source" size={15} />
-                <span>源码</span>
+                <Icon name="edit" size={15} />
+                编辑文档
               </button>
-            </TooltipButton>
-            <button
-              className={styles.primaryButton}
-              type="button"
-              aria-label={editMode ? "完成" : "编辑"}
-              onClick={() => {
-                updateEditor({
-                  editMode: !editMode,
-                  sourceMode: false,
-                  editingBlockId: null,
-                });
-              }}
-            >
-              <Icon name="edit" size={15} />
-              {editMode ? "完成" : "编辑"}
-            </button>
-            <TooltipButton label={ui.theme === "paper" ? "切换夜读主题" : "切换纸页主题"}>
-              <button
-                className={styles.iconButton}
-                type="button"
-                aria-label="切换深浅主题"
-                onClick={() => setTheme(ui.theme === "paper" ? "night" : "paper")}
-              >
-                <Icon name={ui.theme === "paper" ? "moon" : "sun"} size={18} />
-              </button>
-            </TooltipButton>
+            )}
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <button
+                  className={styles.themeControl}
+                  type="button"
+                  aria-label={`选择主题：${activeTheme.label}`}
+                  title={`当前主题：${activeTheme.label}`}
+                >
+                  <Icon name={activeTheme.icon} size={16} />
+                  <span>{activeTheme.label}</span>
+                  <Icon className={styles.themeChevron} name="chevron" size={11} />
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                  className={styles.themeMenu}
+                  sideOffset={8}
+                  align="end"
+                  aria-label="阅读主题"
+                >
+                  <DropdownMenu.Label className={styles.themeMenuLabel}>
+                    阅读主题
+                  </DropdownMenu.Label>
+                  {themeOptions.map((option) => (
+                    <DropdownMenu.Item
+                      className={styles.themeMenuItem}
+                      key={option.value}
+                      onSelect={() => setTheme(option.value)}
+                    >
+                      <span
+                        className={`${styles.themeSwatch} ${styles[`themeSwatch${option.value}`]}`}
+                      />
+                      <span className={styles.themeMenuCopy}>
+                        <strong>{option.label}</strong>
+                        <small>{option.description}</small>
+                      </span>
+                      {ui.theme === option.value ? (
+                        <Icon className={styles.themeCheck} name="check" size={15} />
+                      ) : null}
+                    </DropdownMenu.Item>
+                  ))}
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
             <button
               className={`${styles.iconButton} ${styles.mobileRailButton}`}
               type="button"
@@ -720,8 +784,68 @@ export default function App() {
               ) : null}
             </div>
 
-            {editMode && !sourceMode ? (
-              <div className={styles.editToolbar} aria-label="编辑工具栏">
+            {editing ? (
+              <div className={styles.editorModeBar} aria-label="文档编辑控制">
+                <div className={styles.editorModeIntro}>
+                  <span className={styles.editorModeDot} />
+                  <div>
+                    <span>当前模式</span>
+                    <strong>{sourceMode ? "源码编辑" : "富文本编辑"}</strong>
+                  </div>
+                </div>
+                <div className={styles.editorModeSwitch} role="group" aria-label="编辑方式">
+                  <button
+                    className={richMode ? styles.editorModeActive : ""}
+                    type="button"
+                    aria-pressed={richMode}
+                    onClick={() => switchEditorMode("rich")}
+                  >
+                    <Icon name="edit" size={14} />
+                    富文本
+                  </button>
+                  <button
+                    className={sourceMode ? styles.editorModeActive : ""}
+                    type="button"
+                    aria-pressed={sourceMode}
+                    onClick={() => switchEditorMode("source")}
+                  >
+                    <Icon name="source" size={14} />
+                    Markdown 源码
+                  </button>
+                </div>
+                <span className={styles.editorModeHint}>
+                  {richMode
+                    ? "点击正文中的段落开始编辑，文字样式和版式保持不变"
+                    : "直接编辑整篇 Markdown，修改自动保留为本地草稿"}
+                </span>
+                <span
+                  className={`${styles.editorDraftState} ${
+                    activeDirty ? styles.editorDraftStateDirty : ""
+                  }`}
+                  aria-live="polite"
+                >
+                  <i />
+                  {activeDirty ? "有未保存修改" : "没有待保存修改"}
+                </span>
+                <div className={styles.editorModeActions}>
+                  <button className={styles.cancelEditButton} type="button" onClick={cancelEditing}>
+                    取消更改
+                  </button>
+                  <button
+                    className={styles.saveButton}
+                    type="button"
+                    onClick={() => void saveAndFinishEditing()}
+                    disabled={saving}
+                  >
+                    <Icon name="save" size={15} />
+                    {saving ? "保存中…" : "保存并返回"} <kbd>⌘S</kbd>
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {richMode ? (
+              <div className={styles.editToolbar} aria-label="富文本格式工具">
                 <div className={styles.toolbarTypes}>
                   {[
                     ["h1", "H1"],
@@ -797,16 +921,10 @@ export default function App() {
                   </button>
                 </div>
                 <span className={styles.toolbarHint}>
-                  {editingBlockId ? "块编辑中 · Esc 取消 · ⌘Enter 完成" : "点击任意块开始编辑"}
+                  {editingBlockId
+                    ? "当前块编辑中 · Esc 取消 · ⌘Enter 完成"
+                    : "点击任意段落开始编辑"}
                 </span>
-                <button
-                  className={styles.saveButton}
-                  type="button"
-                  onClick={() => void saveActiveDocument()}
-                >
-                  <Icon name="save" size={15} />
-                  保存 <kbd>⌘S</kbd>
-                </button>
               </div>
             ) : null}
 
@@ -825,13 +943,11 @@ export default function App() {
                   markdown={markdown}
                   dark={ui.theme === "night"}
                   onChange={(value) => activeDoc && setDraft(activeDoc.id, value)}
-                  onSave={() => void saveActiveDocument()}
+                  onSave={() => void saveAndFinishEditing()}
                 />
                 <div className={styles.sourceFooter}>
-                  <span>源码与块编辑共享同一份草稿</span>
-                  <button type="button" onClick={() => void saveActiveDocument()}>
-                    保存 <kbd>⌘S</kbd>
-                  </button>
+                  <span>源码与富文本共享同一份草稿</span>
+                  <span>⌘S 保存并返回 · 取消更改会舍弃本次草稿</span>
                 </div>
               </section>
             ) : (
@@ -841,11 +957,12 @@ export default function App() {
                     doc={activeDoc}
                     markdown={markdown}
                     blocks={blocks}
-                    editMode={editMode}
+                    editMode={richMode}
                     editingBlockId={editingBlockId}
                     favorites={activeFavorites}
                     highlightLine={highlightLine}
-                    onStartEdit={(block) => updateEditor({ editingBlockId: block.id })}
+                    onStartEdit={(block) => updateEditor({ editingBlockId: String(block.index) })}
+                    onDraftChange={changeBlockDraft}
                     onCommitBlock={commitBlock}
                     onToggleFavorite={handleToggleFavorite}
                   />

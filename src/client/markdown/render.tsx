@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { createContext, useContext, type ImgHTMLAttributes, type ReactNode } from "react";
 import * as production from "react/jsx-runtime";
 import rehypeReact, { type Components } from "rehype-react";
 import rehypeSanitize from "rehype-sanitize";
@@ -6,6 +6,35 @@ import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
+
+import type { DocumentModel } from "../../shared/contracts";
+import { rehypeSyntaxHighlight } from "./highlight";
+
+type AssetDocument = Pick<DocumentModel, "id" | "path">;
+
+const MarkdownAssetContext = createContext<AssetDocument | null>(null);
+
+function resolveImageSource(source: string | undefined, document: AssetDocument | null): string {
+  if (!source || !document) return source || "";
+  if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(source)) return source;
+  if (source.startsWith("/api/") || source.startsWith("/assets/")) return source;
+
+  const pathname = source.split(/[?#]/, 1)[0] || "";
+  let decodedPath = pathname;
+  try {
+    decodedPath = decodeURIComponent(pathname);
+  } catch {
+    // Keep the original path when it contains an invalid escape sequence.
+  }
+  return `/api/assets/${encodeURIComponent(document.id)}?path=${encodeURIComponent(decodedPath)}`;
+}
+
+function MarkdownImage(props: ImgHTMLAttributes<HTMLImageElement>) {
+  const document = useContext(MarkdownAssetContext);
+  return (
+    <img {...props} src={resolveImageSource(props.src, document)} loading="lazy" decoding="async" />
+  );
+}
 
 const components = {
   a: (props) => {
@@ -23,6 +52,7 @@ const components = {
   input: (props) => (
     <input {...props} disabled aria-label={props.checked ? "已完成任务" : "未完成任务"} />
   ),
+  img: (props) => <MarkdownImage {...props} />,
 } satisfies Components;
 
 const renderer = unified()
@@ -30,6 +60,7 @@ const renderer = unified()
   .use(remarkGfm)
   .use(remarkRehype, { allowDangerousHtml: false })
   .use(rehypeSanitize)
+  .use(rehypeSyntaxHighlight)
   .use(rehypeReact, {
     Fragment: production.Fragment,
     jsx: production.jsx,
@@ -39,4 +70,14 @@ const renderer = unified()
 
 export function renderMarkdown(markdown: string): ReactNode {
   return renderer.processSync(markdown).result as ReactNode;
+}
+
+export function MarkdownAssetProvider({
+  document,
+  children,
+}: {
+  document: AssetDocument;
+  children: ReactNode;
+}) {
+  return <MarkdownAssetContext.Provider value={document}>{children}</MarkdownAssetContext.Provider>;
 }

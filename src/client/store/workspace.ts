@@ -25,7 +25,7 @@ export interface TabState {
 }
 
 export interface WorkspaceUi {
-  theme: "paper" | "night";
+  theme: "paper" | "eye" | "night";
   sidebarCollapsed: boolean;
   folders: string[];
   railTab: "outline" | "history";
@@ -136,7 +136,7 @@ function migrateLegacy(raw: string): string | null {
       drafts: objectRecord<string>(value.drafts),
       favorites: normalizedFavorites,
       ui: {
-        theme: legacyUi.theme === "night" ? "night" : "paper",
+        theme: legacyUi.theme === "night" || legacyUi.theme === "eye" ? legacyUi.theme : "paper",
         sidebarCollapsed: Boolean(legacyUi.sidebarCollapsed),
         folders: Array.isArray(legacyUi.folders)
           ? legacyUi.folders.filter((item): item is string => typeof item === "string")

@@ -84,6 +84,46 @@
   --selection: rgba(209, 106, 75, 0.28);
 }
 
+:root[data-theme="eye"] {
+  color-scheme: light;
+  --paper: #e8efe2;
+  --paper-deep: #dfe8d7;
+  --surface: rgba(247, 251, 242, 0.9);
+  --surface-solid: #f7fbf2;
+  --surface-soft: #e1ead9;
+  --text: #2c3a2e;
+  --text-soft: #536452;
+  --muted: #788875;
+  --faint: #9daa99;
+  --line: rgba(61, 88, 64, 0.16);
+  --line-strong: rgba(61, 88, 64, 0.28);
+  --accent: #4f7858;
+  --accent-strong: #3b6247;
+  --accent-soft: #d5e5d2;
+  --accent-ink: #f8fcf5;
+  --teal: #44705f;
+  --shadow: 0 20px 60px rgba(48, 73, 48, 0.12);
+  --shadow-small: 0 8px 24px rgba(48, 73, 48, 0.1);
+  --source-bg: #f1f6ec;
+  --source-gutter: #e8f0e1;
+  --source-head-bg: #eaf2e4;
+  --source-active: rgba(79, 120, 88, 0.06);
+  --source-line: rgba(61, 88, 64, 0.14);
+  --source-text: #2d3a2e;
+  --source-text-strong: #1f2d22;
+  --source-muted: #70806d;
+  --source-syntax-heading: #3d6b49;
+  --source-syntax-link: #3f6f73;
+  --source-syntax-code: #725b31;
+  --source-syntax-quote: #61705f;
+  --source-syntax-marker: #94a18f;
+  --source-code-bg: rgba(79, 120, 88, 0.075);
+  --source-caret: #4f7858;
+  --source-search: rgba(185, 147, 61, 0.26);
+  --source-search-selected: rgba(79, 120, 88, 0.24);
+  --selection: rgba(79, 120, 88, 0.2);
+}
+
 * {
   box-sizing: border-box;
 }
@@ -104,8 +144,17 @@ body {
   margin: 0;
   color: var(--text);
   background:
-    radial-gradient(circle at 8% 5%, rgba(183, 72, 41, 0.08), transparent 24rem),
-    radial-gradient(circle at 92% 90%, rgba(77, 109, 99, 0.08), transparent 28rem), var(--paper);
+    radial-gradient(
+      circle at 8% 5%,
+      color-mix(in srgb, var(--accent) 8%, transparent),
+      transparent 24rem
+    ),
+    radial-gradient(
+      circle at 92% 90%,
+      color-mix(in srgb, var(--teal) 8%, transparent),
+      transparent 28rem
+    ),
+    var(--paper);
   overflow: hidden;
 }
 
@@ -117,8 +166,8 @@ body::before {
   content: "";
   opacity: 0.25;
   background-image:
-    linear-gradient(rgba(87, 68, 45, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(87, 68, 45, 0.025) 1px, transparent 1px);
+    linear-gradient(color-mix(in srgb, var(--text) 3%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--text) 2.5%, transparent) 1px, transparent 1px);
   background-size: 30px 30px;
   mask-image: radial-gradient(circle at center, black, transparent 90%);
 }
