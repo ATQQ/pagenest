@@ -7,27 +7,10 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
 
-import type { DocumentModel } from "../../shared/contracts";
+import { resolveImageSource, type AssetDocument } from "./assets";
 import { rehypeSyntaxHighlight } from "./highlight";
 
-type AssetDocument = Pick<DocumentModel, "id" | "path">;
-
 const MarkdownAssetContext = createContext<AssetDocument | null>(null);
-
-function resolveImageSource(source: string | undefined, document: AssetDocument | null): string {
-  if (!source || !document) return source || "";
-  if (/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(source)) return source;
-  if (source.startsWith("/api/") || source.startsWith("/assets/")) return source;
-
-  const pathname = source.split(/[?#]/, 1)[0] || "";
-  let decodedPath = pathname;
-  try {
-    decodedPath = decodeURIComponent(pathname);
-  } catch {
-    // Keep the original path when it contains an invalid escape sequence.
-  }
-  return `/api/assets/${encodeURIComponent(document.id)}?path=${encodeURIComponent(decodedPath)}`;
-}
 
 function MarkdownImage(props: ImgHTMLAttributes<HTMLImageElement>) {
   const document = useContext(MarkdownAssetContext);

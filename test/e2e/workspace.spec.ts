@@ -106,6 +106,26 @@ test("edits a paragraph, saves, and shows the previous version in history", asyn
   await expect(page.getByRole("dialog")).toContainText("与「保存前快照」比较");
 });
 
+test("keeps images intact while editing their paragraph", async ({ page }) => {
+  await page.getByRole("button", { name: "编辑文档" }).click();
+  await page.getByRole("img", { name: "fixture lantern" }).click();
+  const editor = page.getByRole("textbox", { name: "编辑内容块" });
+  const image = editor.getByRole("img", { name: "fixture lantern" });
+  await expect(image).toBeVisible();
+  await expect
+    .poll(() => image.evaluate((element) => (element as HTMLImageElement).naturalWidth))
+    .toBeGreaterThan(0);
+
+  await image.click();
+  await editor.pressSequentially(" Lit at dusk.");
+  await page.getByRole("button", { name: /保存并返回/ }).click();
+  await expect(page.getByRole("status")).toContainText("已保存");
+
+  const saved = await fs.readFile(path.join(workspaceRoot, "README.md"), "utf8");
+  expect(saved).toContain("![fixture lantern](assets/lantern.svg) Lit at dusk.");
+  await expect(page.getByRole("img", { name: "fixture lantern" })).toBeVisible();
+});
+
 test("keeps heading typography stable while editing and exposes one edit control bar", async ({
   page,
 }) => {

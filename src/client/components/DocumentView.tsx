@@ -4,9 +4,11 @@ import {
   type FocusEvent as ReactFocusEvent,
   type FormEvent as ReactFormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
 } from "react";
 
 import type { DocumentModel } from "../../shared/contracts";
+import { resolveImageSource, type AssetDocument } from "../markdown/assets";
 import type { DocumentBlock } from "../markdown/blocks";
 import { MarkdownAssetProvider, renderMarkdown } from "../markdown/render";
 import type { Favorite } from "../store/workspace";
@@ -37,10 +39,28 @@ function escapeHtml(value: string): string {
   );
 }
 
-function inlineMarkdownToHtml(markdown: string): string {
-  let html = escapeHtml(markdown);
+// 不可编辑的图片若位于行尾，浏览器无法把光标放到它后面；补一个零宽字符给光标落脚
+const CARET_ANCHOR = "\u200b";
+
+function imageAtomHtml(source: string, alt: string, target: string, document: AssetDocument) {
+  const url = target.trim().split(/\s+/, 1)[0]!.replace(/^<|>$/g, "");
+  return `<img class="${styles.richEditorImage}" src="${escapeHtml(
+    resolveImageSource(url, document),
+  )}" alt="${escapeHtml(alt)}" data-md="${escapeHtml(source)}" contenteditable="false" draggable="false">${CARET_ANCHOR}`;
+}
+
+function inlineMarkdownToHtml(markdown: string, document: AssetDocument): string {
+  // 图片在其余行内规则之前换成占位符，避免路径里的 `_`、`*` 被当成强调语法
+  const images: string[] = [];
+  let html = markdown.replace(
+    /!\[([^\]]*)\]\(([^)]*)\)/g,
+    (source, alt: string, target: string) => {
+      images.push(imageAtomHtml(source, alt, target, document));
+      return `\uE000${images.length - 1}\uE001`;
+    },
+  );
+  html = escapeHtml(html);
   html = html.replace(/`([^`]+)`/g, "<code>$1</code>");
-  html = html.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, "$1");
   html = html.replace(
     /\[([^\]]+)\]\(([^)]+)\)/g,
     '<a href="$2" target="_blank" rel="noreferrer">$1</a>',
@@ -50,6 +70,7 @@ function inlineMarkdownToHtml(markdown: string): string {
   html = html.replace(/~~([^~]+)~~/g, "<del>$1</del>");
   html = html.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
   html = html.replace(/(^|[^_])_([^_\n]+)_/g, "$1<em>$2</em>");
+  html = html.replace(/\uE000(\d+)\uE001/g, (_, index: string) => images[Number(index)] ?? "");
   return html.replace(/\n/g, "<br>");
 }
 
@@ -60,6 +81,11 @@ function inlineNodeToMarkdown(node: Node): string {
   switch (node.tagName) {
     case "BR":
       return "\n";
+    case "IMG": {
+      if (node.dataset.md) return node.dataset.md;
+      const src = node.getAttribute("src") || "";
+      return src && !src.startsWith("data:") ? `![${node.getAttribute("alt") || ""}](${src})` : "";
+    }
     case "STRONG":
     case "B":
       return `**${children}**`;
@@ -84,9 +110,9 @@ function inlineNodeToMarkdown(node: Node): string {
   }
 }
 
-function editableHtml(block: DocumentBlock): string {
+function editableHtml(block: DocumentBlock, document: AssetDocument): string {
   if (block.kind === "heading") {
-    return inlineMarkdownToHtml(block.markdown.replace(/^#{1,6}\s+/, ""));
+    return inlineMarkdownToHtml(block.markdown.replace(/^#{1,6}\s+/, ""), document);
   }
   if (block.kind === "blockquote") {
     return inlineMarkdownToHtml(
@@ -94,9 +120,10 @@ function editableHtml(block: DocumentBlock): string {
         .split("\n")
         .map((line) => line.replace(/^>\s?/, ""))
         .join("\n"),
+      document,
     );
   }
-  return inlineMarkdownToHtml(block.markdown);
+  return inlineMarkdownToHtml(block.markdown, document);
 }
 
 function commitRichBlock(block: DocumentBlock, element: HTMLElement): string {
@@ -104,6 +131,7 @@ function commitRichBlock(block: DocumentBlock, element: HTMLElement): string {
     .map(inlineNodeToMarkdown)
     .join("")
     .replace(/\u00a0/g, " ")
+    .replaceAll(CARET_ANCHOR, "")
     .trim();
   if (block.kind === "heading") {
     return `${"#".repeat(block.level || 1)} ${markdown.replace(/\s*\n+\s*/g, " ")}`;
@@ -119,6 +147,7 @@ function commitRichBlock(block: DocumentBlock, element: HTMLElement): string {
 
 interface BlockViewProps {
   block: DocumentBlock;
+  assetDocument: AssetDocument;
   editMode: boolean;
   editing: boolean;
   favorite: boolean;
@@ -131,6 +160,7 @@ interface BlockViewProps {
 
 function BlockView({
   block,
+  assetDocument,
   editMode,
   editing,
   favorite,
@@ -145,7 +175,7 @@ function BlockView({
   const sourceCommittedRef = useRef(false);
   const [originalMarkdown] = useState(block.markdown);
   const [source, setSource] = useState(block.markdown);
-  const [initialHtml] = useState(() => editableHtml(block));
+  const [initialHtml] = useState(() => editableHtml(block, assetDocument));
   const rich = richEditableKinds.has(block.kind);
 
   function commitRich(element: HTMLElement) {
@@ -199,6 +229,23 @@ function BlockView({
       }
     },
     onKeyDown: handleRichKeyDown,
+    onMouseDown: (event: ReactMouseEvent<HTMLElement>) => {
+      const target = event.target;
+      if (!(target instanceof HTMLImageElement) || !target.dataset.md) return;
+      event.preventDefault();
+      event.currentTarget.focus();
+      const anchor = target.nextSibling;
+      const range = document.createRange();
+      if (anchor?.nodeType === Node.TEXT_NODE && anchor.textContent?.startsWith(CARET_ANCHOR)) {
+        range.setStart(anchor, CARET_ANCHOR.length);
+      } else {
+        range.setStartAfter(target);
+      }
+      range.collapse(true);
+      const selection = window.getSelection();
+      selection?.removeAllRanges();
+      selection?.addRange(range);
+    },
   };
   let richEditor;
   if (block.kind === "heading") {
@@ -320,6 +367,7 @@ export function Article({
           <BlockView
             key={`${block.index}:${editingBlockId === String(block.index) ? "editing" : "reading"}`}
             block={block}
+            assetDocument={doc}
             editMode={editMode}
             editing={editingBlockId === String(block.index)}
             favorite={Boolean(block.headingId && favoriteIds.has(block.headingId))}

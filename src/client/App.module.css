@@ -1615,13 +1615,27 @@ kbd {
   border-top: 1px solid var(--reader-rule);
 }
 
-.renderedBlock img {
+.renderedBlock img,
+.richEditorImage {
   max-width: 100%;
   border-radius: 8px;
 }
 
+.richEditorImage {
+  vertical-align: bottom;
+  cursor: default;
+  outline: 2px dashed transparent;
+  outline-offset: 3px;
+  transition: outline-color 120ms ease;
+}
+
+.richEditorImage:hover {
+  outline-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
 /* 夜间主题下压低文档内图片亮度，避免大片亮色在暗背景上产生眩光 */
-:root[data-theme-kind="dark"] .renderedBlock img {
+:root[data-theme-kind="dark"] .renderedBlock img,
+:root[data-theme-kind="dark"] .richEditorImage {
   filter: brightness(0.85) contrast(0.96);
 }
 
