@@ -163,6 +163,7 @@ export default function App() {
   const [toast, setToast] = useState("");
   const [saving, setSaving] = useState(false);
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
+  const [readProgress, setReadProgress] = useState(0);
   const mainScrollRef = useRef<HTMLElement>(null);
   const toastTimerRef = useRef<number | null>(null);
   const scrollTimerRef = useRef<number | null>(null);
@@ -289,6 +290,10 @@ export default function App() {
         event.preventDefault();
         setSearchOpen(true);
       }
+      if ((event.metaKey || event.ctrlKey) && event.key === "\\") {
+        event.preventDefault();
+        setSidebarCollapsed(!useWorkspace.getState().ui.sidebarCollapsed);
+      }
       if (event.key === "/" && !typing) {
         event.preventDefault();
         document.querySelector<HTMLInputElement>(`.${styles.searchBox} input`)?.focus();
@@ -321,6 +326,29 @@ export default function App() {
       if (scrollTimerRef.current) window.clearTimeout(scrollTimerRef.current);
     };
   }, [activeDocId, headings, setTabScroll]);
+
+  useEffect(() => {
+    const container = mainScrollRef.current;
+    if (!container) return;
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const max = container.scrollHeight - container.clientHeight;
+        setReadProgress(max > 0 ? Math.min(1, container.scrollTop / max) : 0);
+      });
+    };
+    update();
+    const resizeObserver = new ResizeObserver(update);
+    resizeObserver.observe(container);
+    if (container.firstElementChild) resizeObserver.observe(container.firstElementChild);
+    container.addEventListener("scroll", update, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+      container.removeEventListener("scroll", update);
+    };
+  }, [activeDocId, sourceMode]);
 
   async function saveDocumentById(
     docId: string,
@@ -584,21 +612,21 @@ export default function App() {
   return (
     <Tooltip.Provider delayDuration={450}>
       <div className={styles.app}>
+        {activeDoc && !sourceMode ? (
+          <div className={styles.readProgress} aria-hidden="true">
+            <span style={{ transform: `scaleX(${readProgress})` }} />
+          </div>
+        ) : null}
         <header className={styles.topbar}>
           <div className={styles.topbarStart}>
-            <TooltipButton label={ui.sidebarCollapsed ? "展开目录" : "收起目录"}>
-              <button
-                className={styles.iconButton}
-                type="button"
-                aria-label={ui.sidebarCollapsed ? "展开目录" : "收起目录"}
-                onClick={() => {
-                  if (window.innerWidth < 768) setMobileSidebarOpen(true);
-                  else setSidebarCollapsed(!ui.sidebarCollapsed);
-                }}
-              >
-                <Icon name="menu" size={19} />
-              </button>
-            </TooltipButton>
+            <button
+              className={`${styles.iconButton} ${styles.mobileMenuButton}`}
+              type="button"
+              aria-label="打开目录"
+              onClick={() => setMobileSidebarOpen(true)}
+            >
+              <Icon name="menu" size={19} />
+            </button>
             <div className={styles.brand}>
               <span className={styles.brandMark}>栖</span>
               <span className={styles.brandCopy}>
@@ -770,40 +798,61 @@ export default function App() {
             onNewDocument={() => setNewDocumentOpen(true)}
             onOpenSettings={() => setSettingsOpen(true)}
             onRescan={() => void loadBootstrap()}
+            onCollapse={() => setSidebarCollapsed(true)}
             onCloseMobile={() => setMobileSidebarOpen(false)}
           />
 
           <section className={styles.contentColumn}>
             <div className={styles.tabStrip}>
-              <div className={styles.tabList} role="tablist" aria-label="已打开文档">
+              {ui.sidebarCollapsed ? (
+                <button
+                  className={styles.sidebarExpandButton}
+                  type="button"
+                  aria-label="展开侧栏"
+                  title="展开侧栏（⌘\）"
+                  onClick={() => setSidebarCollapsed(false)}
+                >
+                  <Icon name="sidebar" size={17} />
+                </button>
+              ) : null}
+              <nav className={styles.tabList} aria-label="已打开文档">
                 {tabs.map((tab) => {
                   const doc = docs[tab.docId];
                   if (!doc) return null;
+                  const selected = activeDocId === tab.docId;
                   return (
-                    <button
-                      className={`${styles.tab} ${activeDocId === tab.docId ? styles.tabActive : ""}`}
-                      type="button"
-                      role="tab"
-                      aria-selected={activeDocId === tab.docId}
-                      onClick={() => activateDocument(tab.docId)}
+                    <div
+                      className={`${styles.tab} ${selected ? styles.tabActive : ""}`}
+                      onAuxClick={(event) => {
+                        if (event.button === 1) requestClose(tab.docId);
+                      }}
                       key={tab.docId}
                     >
-                      {dirtyIds.has(tab.docId) ? <i className={styles.dirtyDot} /> : null}
-                      <span>{doc.title}</span>
-                    </button>
+                      <button
+                        className={styles.tabMain}
+                        type="button"
+                        aria-current={selected ? "page" : undefined}
+                        title={doc.path}
+                        onClick={() => activateDocument(tab.docId)}
+                      >
+                        {dirtyIds.has(tab.docId) ? <i className={styles.dirtyDot} /> : null}
+                        <span>{doc.title}</span>
+                      </button>
+                      <button
+                        className={styles.tabClose}
+                        type="button"
+                        aria-label={`关闭 ${doc.title}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          requestClose(tab.docId);
+                        }}
+                      >
+                        <Icon name="close" size={12} />
+                      </button>
+                    </div>
                   );
                 })}
-              </div>
-              {activeDoc ? (
-                <button
-                  className={styles.tabClose}
-                  type="button"
-                  aria-label={`关闭 ${activeDoc.title}`}
-                  onClick={() => requestClose(activeDoc.id)}
-                >
-                  <Icon name="close" size={13} />
-                </button>
-              ) : null}
+              </nav>
             </div>
 
             {editing ? (

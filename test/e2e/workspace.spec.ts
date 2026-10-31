@@ -1,10 +1,15 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import fs from "node:fs/promises";
 import path from "node:path";
 
 const fixtureRoot = path.resolve("test/fixtures/notes");
 const workspaceRoot = path.resolve(".tmp/e2e-notes");
+
+const openTabs = (page: Page) => page.getByRole("navigation", { name: "已打开文档" });
+const docTab = (page: Page, name: string) =>
+  openTabs(page).getByRole("button", { name, exact: true });
+const tabCloseButtons = (page: Page) => openTabs(page).getByRole("button", { name: /^关闭 / });
 
 test.beforeEach(async ({ page }) => {
   await fs.rm(workspaceRoot, { recursive: true, force: true });
@@ -36,7 +41,7 @@ test("switches navigation modes, expands folders, and remembers the theme", asyn
   page,
 }, testInfo) => {
   if (testInfo.project.name === "mobile-chromium") {
-    await page.getByRole("button", { name: "收起目录" }).click();
+    await page.getByRole("button", { name: "打开目录" }).click();
   }
   await page.getByRole("button", { name: "列表" }).click();
   await expect(page.getByRole("button", { name: /Getting started/ })).toBeVisible();
@@ -278,7 +283,7 @@ test("keeps a consistent document rhythm around headings", async ({ page }) => {
 
 test("opens the mobile directory and page rail", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "mobile-chromium", "Mobile layout only");
-  await page.getByRole("button", { name: "收起目录" }).click();
+  await page.getByRole("button", { name: "打开目录" }).click();
   await page.getByRole("button", { name: /notes/ }).click();
   await page.getByRole("button", { name: "Ideas" }).click();
   await expect(page.getByRole("heading", { name: "Ideas", level: 1 })).toBeVisible();
@@ -303,21 +308,43 @@ test("keeps an unsaved draft when the page reloads", async ({ page }) => {
     .fill("This draft survives a browser reload.");
   await page.reload();
   await expect(page.getByText("This draft survives a browser reload.")).toBeVisible();
-  await expect(page.getByRole("tab", { name: "Lantern Notes" }).locator("i")).toBeVisible();
+  await expect(docTab(page, "Lantern Notes").locator("i")).toBeVisible();
 });
 
 test("opens multiple documents in tabs and closes the active tab", async ({ page }, testInfo) => {
   if (testInfo.project.name === "mobile-chromium") {
-    await page.getByRole("button", { name: "收起目录" }).click();
+    await page.getByRole("button", { name: "打开目录" }).click();
   }
   await page.getByRole("button", { name: /notes/ }).click();
   await page.getByRole("button", { name: "Ideas" }).click();
-  const docTabs = page.getByRole("tablist", { name: "已打开文档" }).getByRole("tab");
-  await expect(docTabs).toHaveCount(2);
-  await expect(page.getByRole("tab", { name: "Ideas" })).toHaveAttribute("aria-selected", "true");
+  await expect(tabCloseButtons(page)).toHaveCount(2);
+  await expect(docTab(page, "Ideas")).toHaveAttribute("aria-current", "page");
   await page.getByRole("button", { name: "关闭 Ideas" }).click();
-  await expect(docTabs).toHaveCount(1);
+  await expect(tabCloseButtons(page)).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "Lantern Notes", level: 1 })).toBeVisible();
+});
+
+test("closes an inactive tab without switching away", async ({ page }, testInfo) => {
+  if (testInfo.project.name === "mobile-chromium") {
+    await page.getByRole("button", { name: "打开目录" }).click();
+  }
+  await page.getByRole("button", { name: /notes/ }).click();
+  await page.getByRole("button", { name: "Ideas" }).click();
+  await expect(tabCloseButtons(page)).toHaveCount(2);
+  await docTab(page, "Lantern Notes").hover();
+  await page.getByRole("button", { name: "关闭 Lantern Notes" }).click();
+  await expect(tabCloseButtons(page)).toHaveCount(1);
+  await expect(docTab(page, "Ideas")).toHaveAttribute("aria-current", "page");
+});
+
+test("links the CLI version in the sidebar footer to GitHub", async ({ page }, testInfo) => {
+  if (testInfo.project.name === "mobile-chromium") {
+    await page.getByRole("button", { name: "打开目录" }).click();
+  }
+  const repoLink = page.getByRole("link", { name: /^v\d+\.\d+\.\d+/ });
+  await expect(repoLink).toBeVisible();
+  await expect(repoLink).toHaveAttribute("href", "https://github.com/ATQQ/pagenest");
+  await expect(page.getByText(/本地服务/)).toHaveCount(0);
 });
 
 test("shows conflict details and can load the disk version", async ({ page }) => {
@@ -361,7 +388,7 @@ test("can deliberately keep the local draft on a disk conflict", async ({ page }
 
 test("reuses gitignore and extends it from the page", async ({ page }, testInfo) => {
   if (testInfo.project.name === "mobile-chromium") {
-    await page.getByRole("button", { name: "收起目录" }).click();
+    await page.getByRole("button", { name: "打开目录" }).click();
   }
   await fs.writeFile(path.join(workspaceRoot, ".gitignore"), "private.md\n");
   await fs.writeFile(path.join(workspaceRoot, "private.md"), "# Private notes\n");
@@ -381,7 +408,7 @@ test("reuses gitignore and extends it from the page", async ({ page }, testInfo)
 
 test("creates a new Markdown document from the sidebar", async ({ page }, testInfo) => {
   if (testInfo.project.name === "mobile-chromium") {
-    await page.getByRole("button", { name: "收起目录" }).click();
+    await page.getByRole("button", { name: "打开目录" }).click();
   }
   await page.getByRole("button", { name: "新建" }).click();
   const dialog = page.getByRole("dialog");
@@ -389,7 +416,7 @@ test("creates a new Markdown document from the sidebar", async ({ page }, testIn
   await dialog.getByLabel("路径").fill("notes/release-checklist.md");
   await dialog.getByRole("button", { name: "创建文档" }).click();
   await expect(dialog).toBeHidden();
-  await expect(page.getByRole("tab", { name: "Release checklist" })).toBeVisible();
+  await expect(docTab(page, "Release checklist")).toBeVisible();
   const created = await fs.readFile(path.join(workspaceRoot, "notes/release-checklist.md"), "utf8");
   expect(created).toContain("# Release checklist");
 });
