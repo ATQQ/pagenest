@@ -1,7 +1,7 @@
 /**
  * 参考站点主题：用 docs/color-audit/verify.mjs 在各站点的真实文章页实测（2026-10-29）。
  * bg / ink / link 取自正文段落及段内链接；accent 是官网首页的品牌主题色（logo、meta theme-color、主按钮）。
- * 改完这里运行 `npm run themes:gen` 重新生成 reference-themes.css 与 theme-init.js。
+ * 改完这里运行 `pnpm themes:gen` 重新生成 reference-themes.css 与 theme-init.js。
  */
 export interface ReferenceTheme {
   id: string;

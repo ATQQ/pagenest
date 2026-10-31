@@ -3,7 +3,7 @@
  *  - src/client/styles/reference-themes.css  每个参考站点的完整变量块
  *  - src/client/public/theme-init.js         首屏前恢复主题的脚本
  *
- * 用法：npm run themes:gen
+ * 用法：pnpm themes:gen
  */
 import { writeFileSync } from "node:fs";
 import path from "node:path";

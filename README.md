@@ -32,13 +32,13 @@ PageNest 直接读取指定目录中的 Markdown 文件，用浏览器提供阅�
 
 ## 快速开始
 
-需要 Node.js `>= 22.12` 和 npm。
+需要 Node.js `>= 22.12` 和 pnpm 10。
 
 ```bash
 git clone https://github.com/ATQQ/pagenest.git
 cd pagenest
-npm install
-npm run build
+pnpm install
+pnpm build
 node ./bin/pagenest.js /path/to/notes
 ```
 
@@ -53,7 +53,7 @@ node /path/to/pagenest/bin/pagenest.js
 
 ```bash
 cd /path/to/pagenest
-npm link
+pnpm link --global
 pn /path/to/notes
 ```
 
@@ -115,7 +115,7 @@ pn /path/to/notes
 菜单下方另有「文档站配色 / 阅读站配色」两组，复刻 14 个站点文章页的底色、正文、链接与按钮色
 （GitHub、Claude Docs、MDN、语雀、豆瓣读书、番茄小说等），菜单里标注了各自的正文对比度。
 色值用 `node docs/color-audit/verify.mjs` 在各站点真实文章页实测，记录在
-`src/client/referenceThemes.ts`；修改后运行 `npm run themes:gen`
+`src/client/referenceThemes.ts`；修改后运行 `pnpm themes:gen`
 重新生成 `styles/reference-themes.css` 与 `public/theme-init.js`。
 
 ## CLI
@@ -209,21 +209,21 @@ pagenest/
 ## 开发
 
 ```bash
-npm install
-npm run dev -- /path/to/notes
+pnpm install
+pnpm dev /path/to/notes
 ```
 
 开发模式中，Vite 在 `5173` 提供前端 HMR，Node 服务在 `4321` 提供 API 与 SSE。
 
-| 命令                | 用途                   |
-| ------------------- | ---------------------- |
-| `npm run dev`       | 启动前端与后端开发模式 |
-| `npm run build`     | 构建客户端和服务端     |
-| `npm test`          | 运行单元与集成测试     |
-| `npm run test:e2e`  | 运行 Playwright 验收   |
-| `npm run typecheck` | TypeScript 类型检查    |
-| `npm run lint`      | ESLint 检查            |
-| `npm run verify`    | 执行完整质量检查与构建 |
+| 命令             | 用途                   |
+| ---------------- | ---------------------- |
+| `pnpm dev`       | 启动前端与后端开发模式 |
+| `pnpm build`     | 构建客户端和服务端     |
+| `pnpm test`      | 运行单元与集成测试     |
+| `pnpm test:e2e`  | 运行 Playwright 验收   |
+| `pnpm typecheck` | TypeScript 类型检查    |
+| `pnpm lint`      | ESLint 检查            |
+| `pnpm verify`    | 执行完整质量检查与构建 |
 
 ## 局域网访问
 

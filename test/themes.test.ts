@@ -60,7 +60,7 @@ test("the pre-paint theme script knows every theme and its kind", () => {
         /"([^"]+)"/g,
       ),
     ].map((match) => match[1]);
-  assert.deepEqual(list("THEMES"), themeIds, "run `npm run themes:gen` to refresh theme-init.js");
+  assert.deepEqual(list("THEMES"), themeIds, "run `pnpm themes:gen` to refresh theme-init.js");
   assert.deepEqual(
     list("DARK"),
     themeIds.filter((id) => themeKindOf(id) === "dark"),
