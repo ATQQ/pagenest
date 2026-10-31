@@ -853,6 +853,17 @@ export default function App() {
                   );
                 })}
               </nav>
+              {ui.railCollapsed ? (
+                <button
+                  className={styles.railExpandButton}
+                  type="button"
+                  aria-label="展开本页侧栏"
+                  title="展开本页侧栏"
+                  onClick={() => setRailCollapsed(false)}
+                >
+                  <Icon name="sidebarRight" size={17} />
+                </button>
+              ) : null}
             </div>
 
             {editing ? (
@@ -1077,15 +1088,26 @@ export default function App() {
               onValueChange={(value) => setRailTab(value === "history" ? "history" : "outline")}
               className={styles.railTabs}
             >
-              <Tabs.List className={styles.railTabList} aria-label="本页侧栏">
-                <Tabs.Trigger value="outline">
-                  <Icon name="outline" size={14} /> 目录
-                </Tabs.Trigger>
-                <Tabs.Trigger value="history">
-                  <Icon name="history" size={14} /> 历史
-                  <span>{activeVersions.length}</span>
-                </Tabs.Trigger>
-              </Tabs.List>
+              <div className={styles.railHead}>
+                <Tabs.List className={styles.railTabList} aria-label="本页侧栏">
+                  <Tabs.Trigger value="outline">
+                    <Icon name="outline" size={14} /> 目录
+                  </Tabs.Trigger>
+                  <Tabs.Trigger value="history">
+                    <Icon name="history" size={14} /> 历史
+                    <span>{activeVersions.length}</span>
+                  </Tabs.Trigger>
+                </Tabs.List>
+                <button
+                  className={styles.railCollapseButton}
+                  type="button"
+                  aria-label="收起本页侧栏"
+                  title="收起本页侧栏"
+                  onClick={() => setRailCollapsed(true)}
+                >
+                  <Icon name="sidebarRight" size={17} />
+                </button>
+              </div>
               <Tabs.Content value="outline" className={styles.railContent}>
                 <div className={styles.outline}>
                   {headings.map((heading) => (

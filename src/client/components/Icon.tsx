@@ -32,6 +32,7 @@ export type IconName =
   | "chevronRight"
   | "external"
   | "sidebar"
+  | "sidebarRight"
   | "github";
 
 const paths: Record<IconName, React.ReactNode> = {
@@ -141,6 +142,12 @@ const paths: Record<IconName, React.ReactNode> = {
     <>
       <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" />
       <path d="M9.5 4.5v15M5.8 8.5h1.6M5.8 11.5h1.6" />
+    </>
+  ),
+  sidebarRight: (
+    <>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" />
+      <path d="M14.5 4.5v15M16.6 8.5h1.6M16.6 11.5h1.6" />
     </>
   ),
   github: (

@@ -917,8 +917,15 @@ kbd {
   margin: -5px 6px 0 -6px;
 }
 
+.railExpandButton {
+  align-self: center;
+  margin: -5px -6px 0 auto;
+}
+
 .sidebarCollapseButton,
-.sidebarExpandButton {
+.sidebarExpandButton,
+.railCollapseButton,
+.railExpandButton {
   display: grid;
   flex: none;
   width: 29px;
@@ -933,7 +940,9 @@ kbd {
 }
 
 .sidebarCollapseButton:hover,
-.sidebarExpandButton:hover {
+.sidebarExpandButton:hover,
+.railCollapseButton:hover,
+.railExpandButton:hover {
   color: var(--text);
   background: color-mix(in srgb, var(--surface-solid) 70%, transparent);
 }
@@ -1959,11 +1968,18 @@ kbd {
   margin-left: auto;
 }
 
+.railHead {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 12px 8px 8px 12px;
+}
+
 .railTabList {
   display: grid;
+  flex: 1;
   grid-template-columns: 1fr 1fr;
   gap: 3px;
-  margin: 12px 12px 8px;
   padding: 3px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -2749,7 +2765,9 @@ kbd {
     --read-max: 100vw;
   }
 
-  .panelToggle {
+  .panelToggle,
+  .railCollapseButton,
+  .railExpandButton {
     display: none;
   }
 
