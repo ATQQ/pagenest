@@ -11,10 +11,11 @@ import {
   themeOptions,
 } from "../src/client/themes.js";
 
-const globalCss = readFileSync(
-  path.resolve(import.meta.dirname, "../src/client/styles/global.css"),
-  "utf8",
-);
+const globalCss = ["global.css", "reference-themes.css"]
+  .map((file) =>
+    readFileSync(path.resolve(import.meta.dirname, "../src/client/styles", file), "utf8"),
+  )
+  .join("\n");
 
 test("exposes a book-reader theme for every id with a unique label", () => {
   assert.ok(themeIds.length >= 8);
@@ -46,6 +47,24 @@ test("defines a colour block for every theme and keeps the default valid", () =>
     );
   }
   assert.ok(globalCss.includes(':root[data-theme="night"],'));
+});
+
+test("the pre-paint theme script knows every theme and its kind", () => {
+  const init = readFileSync(
+    path.resolve(import.meta.dirname, "../src/client/public/theme-init.js"),
+    "utf8",
+  );
+  const list = (name: string) =>
+    [
+      ...(init.match(new RegExp(`var ${name} = \\[([^\\]]*)\\]`))?.[1] ?? "").matchAll(
+        /"([^"]+)"/g,
+      ),
+    ].map((match) => match[1]);
+  assert.deepEqual(list("THEMES"), themeIds, "run `npm run themes:gen` to refresh theme-init.js");
+  assert.deepEqual(
+    list("DARK"),
+    themeIds.filter((id) => themeKindOf(id) === "dark"),
+  );
 });
 
 test("every theme defines the reader tokens the reading view depends on", () => {
@@ -129,7 +148,7 @@ function tokenOf(block: string, token: string): [number, number, number] {
 
 /**
  * 侧栏与右栏的文字必须读得清：正文级文字至少 AA（4.5:1），
- * 更弱的辅助色至少达到 3:1 的非文本对比度下限。
+ * 更弱的辅助色也承载文字（占位符、计数、时间），同样不低于 4.5:1。
  */
 test("every theme keeps sidebar text legible against the panel surface", () => {
   for (const id of themeIds) {
@@ -146,6 +165,6 @@ test("every theme keeps sidebar text legible against the panel surface", () => {
     }
 
     const faint = contrast(tokenOf(block, "--faint"), background);
-    assert.ok(faint >= 3, `${id}: --faint only reaches ${faint.toFixed(2)}:1 against the panel`);
+    assert.ok(faint >= 4.5, `${id}: --faint only reaches ${faint.toFixed(2)}:1 against the panel`);
   }
 });

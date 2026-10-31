@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 
 import App from "./App";
 import "./styles/global.css";
+import "./styles/reference-themes.css";
 
 const host = document.getElementById("root");
 if (!host) throw new Error("PageNest root element is missing.");

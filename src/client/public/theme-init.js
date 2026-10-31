@@ -1,5 +1,29 @@
+// 由 scripts/gen-themes.ts 生成，请勿手改
 (function () {
-  var THEMES = ["paper", "sepia", "white", "eye", "douchi", "night", "dark", "amoled"];
+  var THEMES = [
+    "paper",
+    "sepia",
+    "white",
+    "eye",
+    "douchi",
+    "night",
+    "dark",
+    "amoled",
+    "github",
+    "astro",
+    "vercel",
+    "mkdocs",
+    "anthropic",
+    "stripe",
+    "nextjs",
+    "mdn",
+    "yuque",
+    "sspai",
+    "gutenberg",
+    "douban",
+    "fanqie",
+    "v2ex",
+  ];
   var DARK = ["night", "dark", "amoled"];
 
   function apply(theme) {

@@ -34,6 +34,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "themes:gen": "tsx ./scripts/gen-themes.ts && prettier --write src/client/styles/reference-themes.css src/client/public/theme-init.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",

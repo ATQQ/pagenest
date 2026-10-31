@@ -692,7 +692,10 @@ export default function App() {
                             onSelect={() => setTheme(option.value)}
                           >
                             <span
-                              className={`${styles.themeSwatch} ${styles[`themeSwatch${option.value}`]}`}
+                              className={styles.themeSwatch}
+                              style={{
+                                background: `linear-gradient(135deg, ${option.swatch[0]} 0 52%, ${option.swatch[1]} 52% 100%)`,
+                              }}
                             />
                             <span className={styles.themeMenuCopy}>
                               <strong>{option.label}</strong>
