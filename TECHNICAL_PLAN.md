@@ -19,7 +19,7 @@
 | 项目       | 选择                                  |
 | ---------- | ------------------------------------- |
 | Node.js    | `>=22.12.0`；CI 覆盖 22.12 与 24.x    |
-| 包管理     | npm + `package-lock.json`             |
+| 包管理     | pnpm 10 + `pnpm-lock.yaml`            |
 | 服务端     | Node 原生 `http`、`fs`、`crypto`、SSE |
 | 运行时依赖 | 0；前端依赖在构建时全部打包           |
 | 模块格式   | ESM                                   |
@@ -289,12 +289,12 @@ PUT(markdown, baseHash)
 ## 11. 质量与发布
 
 ```bash
-npm run lint
-npm run typecheck
-npm test
-npm run build
-npm run test:e2e
-npm run pack:check
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm test:e2e
+pnpm pack:check
 ```
 
 构建顺序：
@@ -302,7 +302,7 @@ npm run pack:check
 1. 清理 `dist`。
 2. Vite 输出 `dist/client`。
 3. `tsc -p tsconfig.server.json` 输出 `dist/server` 与 `dist/cli`。
-4. npm 打包后用 tarball 在临时目录安装，真实运行 `pn --no-open` 验证扫描、打开、保存和 SSE。
+4. `pnpm pack` 打包后用 tarball 在临时目录安装，真实运行 `pn --no-open` 验证扫描、打开、保存和 SSE。
 
 CI 使用 Node 22.12 与 24.x 矩阵，执行相同质量链路。仓库保持独立 Git 历史，由维护者自行配置 remote 和推送。
 

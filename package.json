@@ -22,11 +22,12 @@
   "engines": {
     "node": ">=22.12.0"
   },
+  "packageManager": "pnpm@10.33.2",
   "scripts": {
     "dev": "node ./scripts/dev.mjs",
     "dev:server": "tsx watch ./src/cli/main.ts --no-open",
     "dev:client": "vite",
-    "build": "npm run clean && npm run build:client && npm run build:server",
+    "build": "pnpm run clean && pnpm run build:client && pnpm run build:server",
     "build:client": "vite build",
     "build:server": "tsc -p tsconfig.server.json",
     "clean": "rimraf dist coverage",
@@ -39,8 +40,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "pack:check": "npm pack --dry-run",
-    "verify": "npm run lint && npm run typecheck && npm run test && npm run build && npm run test:e2e && npm run pack:check"
+    "pack:check": "pnpm pack --dry-run",
+    "verify": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm run test:e2e && pnpm run pack:check"
   },
   "keywords": [
     "markdown",
@@ -60,6 +61,11 @@
     "url": "https://github.com/ATQQ/pagenest/issues"
   },
   "license": "MIT",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
     "@codemirror/commands": "6.11.1",
@@ -80,6 +86,7 @@
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.3",
     "@testing-library/user-event": "14.6.8",
+    "@types/hast": "3.0.5",
     "@types/mdast": "4.0.4",
     "@types/node": "22.20.5",
     "@types/react": "19.3.0",
