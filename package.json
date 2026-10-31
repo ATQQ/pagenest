@@ -24,7 +24,7 @@
   },
   "scripts": {
     "dev": "node ./scripts/dev.mjs",
-    "dev:server": "tsx watch ./src/cli/index.ts --no-open",
+    "dev:server": "tsx watch ./src/cli/main.ts --no-open",
     "dev:client": "vite",
     "build": "npm run clean && npm run build:client && npm run build:server",
     "build:client": "vite build",

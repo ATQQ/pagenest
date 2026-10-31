@@ -16,7 +16,7 @@ function run(command, args) {
   });
 }
 
-run(process.execPath, ["--import", "tsx", "./src/cli/index.ts", root, "--no-open"]);
+run(process.execPath, ["--import", "tsx", "./src/cli/main.ts", root, "--no-open"]);
 run(process.execPath, ["./node_modules/vite/bin/vite.js"]);
 
 function shutdown() {
