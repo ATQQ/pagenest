@@ -59,6 +59,7 @@ pagenest/
 ├── bin/pagenest.js           # 可执行入口，只调用 dist/cli
 ├── src/
 │   ├── cli/index.ts          # 参数、host/port、token、浏览器
+│   ├── cli/main.ts           # 开发入口，从源码直接运行 CLI
 │   ├── server/
 │   │   ├── ignore.ts         # Git-style 匹配器
 │   │   ├── library.ts        # 扫描、保存、历史、搜索
