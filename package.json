@@ -41,6 +41,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "pack:check": "pnpm pack --dry-run",
+    "prepublishOnly": "pnpm run build",
     "verify": "pnpm run lint && pnpm run typecheck && pnpm run test && pnpm run build && pnpm run test:e2e && pnpm run pack:check"
   },
   "keywords": [

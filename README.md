@@ -4,12 +4,13 @@
 
 本地优先的 Markdown 阅读、编辑与版本工作台。
 
+[![npm](https://img.shields.io/npm/v/pagenest?logo=npm&color=cb3837)](https://www.npmjs.com/package/pagenest)
 [![Node.js](https://img.shields.io/badge/Node.js-%3E%3D22.12-3c873a?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/github/license/ATQQ/pagenest)](./LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/ATQQ/pagenest?style=flat&logo=github)](https://github.com/ATQQ/pagenest)
 
-[快速开始](#快速开始) · [使用](#使用) · [CLI](#cli) · [项目结构](#项目结构) · [开发](#开发) · [技术方案](./TECHNICAL_PLAN.md)
+[快速开始](#快速开始) · [使用](#使用) · [CLI](#cli) · [项目结构](#项目结构) · [开发](#开发) · [更新日志](./CHANGELOG.md) · [技术方案](./TECHNICAL_PLAN.md)
 
 </div>
 
@@ -32,29 +33,35 @@ PageNest 直接读取指定目录中的 Markdown 文件，用浏览器提供阅�
 
 ## 快速开始
 
-需要 Node.js `>= 22.12` 和 pnpm 10。
+需要 Node.js `>= 22.12`。
 
 ```bash
-git clone https://github.com/ATQQ/pagenest.git
-cd pagenest
-pnpm install
-pnpm build
-node ./bin/pagenest.js /path/to/notes
+npm install -g pagenest
 ```
 
-不传目录时打开当前目录：
+打开当前目录：
 
 ```bash
-cd /path/to/notes
-node /path/to/pagenest/bin/pagenest.js
+pagenest
+# 或
+pn
 ```
 
-安装本地全局命令：
+打开指定目录：
 
 ```bash
-cd /path/to/pagenest
-pnpm link --global
+pagenest /path/to/notes
+# 或
 pn /path/to/notes
+```
+
+免安装运行：
+
+```bash
+# 打开当前目录
+npx pagenest
+# 或 指定目录
+npx pagenest /path/to/notes
 ```
 
 默认地址为 `http://127.0.0.1:4321/`，按 `Ctrl+C` 停止服务。
@@ -178,10 +185,12 @@ pagenest/
 │   └── pagenest.js            # CLI 发布入口
 ├── scripts/
 │   ├── dev.mjs                # 前端与服务端联合开发
-│   └── e2e-server.mjs         # Playwright 测试服务
+│   ├── e2e-server.mjs         # Playwright 测试服务
+│   └── gen-themes.ts          # 生成参考配色主题
 ├── src/
 │   ├── cli/
-│   │   └── index.ts           # 参数、端口、host、token
+│   │   ├── index.ts           # 参数、端口、host、token
+│   │   └── main.ts            # 开发入口，从源码运行 CLI
 │   ├── client/
 │   │   ├── components/        # 文档、侧栏、编辑器、弹窗
 │   │   ├── markdown/          # 块解析与 Markdown 渲染
@@ -205,13 +214,31 @@ pagenest/
 └── package.json
 ```
 
-`dist/` 为构建产物，运行时自动生成。详细架构见 [TECHNICAL_PLAN.md](./TECHNICAL_PLAN.md)。
+`dist/` 为构建产物，由 `pnpm build` 生成。详细架构见 [TECHNICAL_PLAN.md](./TECHNICAL_PLAN.md)。
 
 ## 开发
 
+需要 Node.js `>= 22.12` 和 pnpm 10。
+
 ```bash
+git clone https://github.com/ATQQ/pagenest.git
+cd pagenest
 pnpm install
 pnpm dev /path/to/notes
+```
+
+从源码构建并运行：
+
+```bash
+pnpm build
+node ./bin/pagenest.js /path/to/notes
+```
+
+把源码版本链接为全局命令：
+
+```bash
+pnpm link --global
+pn /path/to/notes
 ```
 
 开发模式中，Vite 在 `5173` 提供前端 HMR，Node 服务在 `4321` 提供 API 与 SSE。
