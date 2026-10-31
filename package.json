@@ -1,6 +1,6 @@
 {
   "name": "pagenest",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "PageNest / 页栖: a local-first Markdown reading, editing, and version history studio.",
   "type": "module",
   "bin": {
@@ -15,6 +15,7 @@
     "dist",
     "docs",
     "README.md",
+    "CHANGELOG.md",
     "TECHNICAL_PLAN.md",
     "LICENSE"
   ],
