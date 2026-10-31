@@ -1,6 +1,6 @@
 {
   "name": "pagenest",
-  "version": "0.3.0",
+  "version": "0.1.0",
   "description": "PageNest / 页栖: a local-first Markdown reading, editing, and version history studio.",
   "type": "module",
   "bin": {
