@@ -72,8 +72,11 @@ interface SidebarProps {
   onNewDocument: () => void;
   onOpenSettings: () => void;
   onRescan: () => void;
+  onCollapse: () => void;
   onCloseMobile: () => void;
 }
+
+const REPO_URL = "https://github.com/ATQQ/pagenest";
 
 export function Sidebar({
   documents,
@@ -92,6 +95,7 @@ export function Sidebar({
   onNewDocument,
   onOpenSettings,
   onRescan,
+  onCollapse,
   onCloseMobile,
 }: SidebarProps) {
   const query = filter.trim().toLowerCase();
@@ -159,12 +163,21 @@ export function Sidebar({
       <div className={styles.sidebarHead}>
         <div>
           <span className={styles.kicker}>Library</span>
-          <strong>资料夹</strong>
+          <strong title={rootName}>{rootName || "资料夹"}</strong>
         </div>
         <div className={styles.sidebarHeadActions}>
           <button className={styles.miniButton} type="button" onClick={onNewDocument}>
             <Icon name="plus" size={14} />
             新建
+          </button>
+          <button
+            className={styles.sidebarCollapseButton}
+            type="button"
+            aria-label="收起侧栏"
+            title="收起侧栏（⌘\）"
+            onClick={onCollapse}
+          >
+            <Icon name="sidebar" size={17} />
           </button>
           <button
             className={styles.mobileClose}
@@ -252,10 +265,6 @@ export function Sidebar({
       </ScrollArea.Root>
 
       <div className={styles.sidebarFoot}>
-        <div className={styles.localNote}>
-          <span className={styles.localDot} />
-          <span title={rootName}>本地服务 · {rootName || "正在读取"}</span>
-        </div>
         <div className={styles.sidebarFootActions}>
           <button type="button" onClick={onOpenSettings}>
             <Icon name="settings" size={13} />
@@ -266,6 +275,15 @@ export function Sidebar({
             重新扫描
           </button>
         </div>
+        <a
+          className={styles.repoLink}
+          href={REPO_URL}
+          target="_blank"
+          rel="noreferrer"
+          title="在 GitHub 查看 PageNest"
+        >
+          <Icon name="github" size={14} />v{__APP_VERSION__}
+        </a>
       </div>
     </aside>
   );

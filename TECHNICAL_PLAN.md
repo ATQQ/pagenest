@@ -28,18 +28,18 @@
 
 ### 2.2 前端与工程
 
-| 类别       | 依赖                                                                            |
-| ---------- | ------------------------------------------------------------------------------- |
-| 框架       | React `19.3.1`、React DOM `19.3.1`                                              |
-| 构建       | Vite `8.3.4`、`@vitejs/plugin-react 6.1.2`                                      |
-| 语言       | TypeScript `6.0.3`                                                              |
-| 状态       | Zustand `5.0.15`                                                                |
-| 基础组件   | Radix Dialog、AlertDialog、Tabs、DropdownMenu、Tooltip、ScrollArea              |
-| 样式       | CSS Variables + CSS Modules，保留暖纸/夜读视觉                                  |
-| Markdown   | unified、remark-parse、remark-gfm、remark-rehype、rehype-react、rehype-sanitize |
-| 代码高亮   | Shiki core + JavaScript 正则引擎，只打包常用语言与高对比度明暗主题              |
-| 源码编辑器 | CodeMirror 6，动态导入                                                          |
-| Diff       | `diff 9.0.0`                                                                    |
+| 类别       | 依赖                                                                                   |
+| ---------- | -------------------------------------------------------------------------------------- |
+| 框架       | React `19.3.1`、React DOM `19.3.1`                                                     |
+| 构建       | Vite `8.3.4`、`@vitejs/plugin-react 6.1.2`                                             |
+| 语言       | TypeScript `6.0.3`                                                                     |
+| 状态       | Zustand `5.0.15`                                                                       |
+| 基础组件   | Radix Dialog、AlertDialog、Tabs、DropdownMenu、Tooltip、ScrollArea                     |
+| 样式       | CSS Variables + CSS Modules，八套阅读主题（纸页/羊皮纸/纯白/护眼/豆沙/夜读/墨夜/纯黑） |
+| Markdown   | unified、remark-parse、remark-gfm、remark-rehype、rehype-react、rehype-sanitize        |
+| 代码高亮   | Shiki core + JavaScript 正则引擎，只打包常用语言与高对比度明暗主题                     |
+| 源码编辑器 | CodeMirror 6，动态导入                                                                 |
+| Diff       | `diff 9.0.0`                                                                           |
 
 TypeScript 固定在 6.0.x，因为当前 `typescript-eslint 8.71.2` 尚不支持 TypeScript 7。升级 TS 前先确认 ESLint parser 的 peer range。
 
@@ -147,7 +147,7 @@ Zustand 状态分为两层：
   drafts: Record<string, string>;
   favorites: Record<string, Favorite[]>;
   ui: {
-    theme: "paper" | "night";
+    theme: ThemeId; // paper | sepia | white | eye | douchi | night | dark | amoled
     sidebarCollapsed: boolean;
     folders: string[];
     railTab: "outline" | "history";

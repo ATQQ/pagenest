@@ -1,127 +1,451 @@
-:root {
+/* ---------------------------------------------------------------------------
+   PageNest 阅读主题
+   ---------------------------------------------------------------------------
+   设计原则（阅读舒适优先）：
+   1. 版面平整 —— 页面底色保持纯净、均匀，不叠加网格、噪点或高饱和色晕，
+      也不做上下亮度渐变，避免眼睛在文字背景上反复对焦。
+   2. 文字优先 —— 正文墨色与纸面对比度保持在 10:1 以上、14:1 以内，
+      字号行距适合长时间阅读。
+   3. 低彩度强调色 —— 正文链接使用去饱和的赭褐 / 墨绿 / 靛蓝，
+      Lab 彩度 C* 控制在 30 以内，避免在阅读时出现刺眼的高彩度色块。
+   4. 低色偏底色 —— 阅读底色彩度 C* 控制在 8 以内，
+      有色底会给汉字笔画带来色差。
+   5. 深色主题不刺眼 —— 夜间主题使用暖调低亮度底色，而不是纯黑白高反差。
+
+   变量分层：
+   - --paper / --surface*   应用外壳（侧边栏、顶栏、面板）
+   - --reader-*             阅读区（正文纸面、墨色、链接、引用、代码底色）
+   - --source-*             Markdown 源码编辑器
+   - --theme-kind           light | dark，用于结构性规则（代码高亮、滚动条等）
+--------------------------------------------------------------------------- */
+
+:root,
+:root[data-theme="paper"] {
   color-scheme: light;
   font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  --paper: #f7f0e3;
-  --paper-deep: #efe4d2;
-  --surface: rgba(255, 251, 243, 0.88);
-  --surface-solid: #fffaf0;
-  --surface-soft: #f1e7d7;
-  --text: #302b25;
-  --text-soft: #5f5549;
-  --muted: #8e8172;
-  --faint: #b8aa98;
-  --line: rgba(105, 84, 59, 0.16);
-  --line-strong: rgba(105, 84, 59, 0.28);
-  --accent: #b74829;
-  --accent-strong: #94341b;
-  --accent-soft: #f2d7ca;
-  --accent-ink: #fffaf3;
-  --teal: #4d6d63;
-  --shadow: 0 20px 60px rgba(72, 52, 32, 0.12);
-  --shadow-small: 0 8px 24px rgba(72, 52, 32, 0.1);
-  --source-bg: #fbf5ea;
-  --source-gutter: #f1e6d6;
-  --source-head-bg: #f3e9d9;
-  --source-active: rgba(183, 72, 41, 0.055);
-  --source-line: rgba(105, 84, 59, 0.14);
-  --source-text: #302b25;
-  --source-text-strong: #231f1a;
-  --source-muted: #796d60;
-  --source-syntax-heading: #8f3e25;
-  --source-syntax-link: #3f6d60;
-  --source-syntax-code: #8a4a2d;
-  --source-syntax-quote: #675b4e;
-  --source-syntax-marker: #a18f79;
-  --source-code-bg: rgba(183, 72, 41, 0.065);
-  --source-caret: #b74829;
-  --source-search: rgba(210, 153, 67, 0.26);
-  --source-search-selected: rgba(183, 72, 41, 0.24);
-  --selection: rgba(183, 72, 41, 0.2);
+  --theme-kind: light;
+
+  /* 纸页 —— 暖白纸面，底彩度 3.7，正文对比 13:1 */
+  --paper: #f1ede4;
+  --paper-deep: #e9e5da;
+  --surface: rgba(252, 250, 245, 0.88);
+  --surface-solid: #faf8f3;
+  --surface-soft: #f0ece3;
+  --reader-bg: #f7f4ed;
+  --reader-ink: #2d2a25;
+  --reader-heading: #232019;
+  --reader-link: #865b39;
+  --reader-muted: #6b645a;
+  --reader-rule: rgba(90, 76, 58, 0.15);
+  --reader-code-bg: rgba(138, 90, 51, 0.07);
+  --reader-quote-bg: rgba(138, 90, 51, 0.045);
+  --text: #2d2a25;
+  --text-soft: #4f4941;
+  --muted: #5b544b;
+  --faint: #676159;
+  --line: rgba(90, 76, 58, 0.13);
+  --line-strong: rgba(90, 76, 58, 0.24);
+  --accent: #8a5a33;
+  --accent-strong: #6f4828;
+  --accent-soft: #eee2d4;
+  --accent-ink: #fdf8f2;
+  /* 实心强调面的底色与文字色，夜间主题会换成低彩度版本，避免大色块刺眼 */
+  --accent-fill: var(--accent);
+  --accent-fill-ink: var(--accent-ink);
+  --accent-fill-hover: var(--accent-strong);
+  --brand-fill: var(--accent);
+  --brand-ink: var(--accent-ink);
+  --teal: #51665f;
+  --shadow: 0 20px 60px rgba(72, 56, 38, 0.1);
+  --shadow-small: 0 8px 24px rgba(72, 56, 38, 0.08);
+  --source-bg: #f4f1e8;
+  --source-gutter: #ece7db;
+  --source-head-bg: #efeae0;
+  --source-active: rgba(138, 90, 51, 0.05);
+  --source-line: rgba(90, 76, 58, 0.12);
+  --source-text: #2d2a25;
+  --source-text-strong: #201d18;
+  --source-muted: #6b645a;
+  --source-syntax-heading: #85582f;
+  --source-syntax-link: #456860;
+  --source-syntax-code: #7a5638;
+  --source-syntax-quote: #5f5952;
+  --source-syntax-marker: #948c81;
+  --source-code-bg: rgba(138, 90, 51, 0.07);
+  --source-caret: #8a5a33;
+  --source-search: rgba(190, 150, 80, 0.22);
+  --source-search-selected: rgba(138, 90, 51, 0.2);
+  --selection: rgba(138, 90, 51, 0.16);
   --serif: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", serif;
   --sans: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --mono: "SFMono-Regular", "Cascadia Code", "Noto Sans Mono", monospace;
 }
 
-:root[data-theme="night"] {
-  color-scheme: dark;
-  --paper: #1c1a18;
-  --paper-deep: #141311;
-  --surface: rgba(35, 32, 29, 0.9);
-  --surface-solid: #25221f;
-  --surface-soft: #2d2925;
-  --text: #eee5d8;
-  --text-soft: #c7baaa;
-  --muted: #978a7b;
-  --faint: #6e6459;
-  --line: rgba(241, 221, 194, 0.12);
-  --line-strong: rgba(241, 221, 194, 0.22);
-  --accent: #d16a4b;
-  --accent-strong: #ee8d6c;
-  --accent-soft: #3c2922;
-  --accent-ink: #1e1714;
-  --teal: #8fb3a8;
-  --shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
-  --shadow-small: 0 8px 26px rgba(0, 0, 0, 0.28);
-  --source-bg: #171513;
-  --source-gutter: #131210;
-  --source-head-bg: #1d1a17;
-  --source-active: rgba(255, 255, 255, 0.045);
-  --source-line: rgba(241, 221, 194, 0.1);
-  --source-text: #e8decf;
-  --source-text-strong: #fff7eb;
-  --source-muted: #9a8d7f;
-  --source-syntax-heading: #f0a17f;
-  --source-syntax-link: #9bc6b8;
-  --source-syntax-code: #e6b38d;
-  --source-syntax-quote: #b9a998;
-  --source-syntax-marker: #877a6d;
-  --source-code-bg: rgba(240, 161, 127, 0.1);
-  --source-caret: #e47c5b;
-  --source-search: rgba(214, 171, 88, 0.22);
-  --source-search-selected: rgba(209, 106, 75, 0.3);
-  --selection: rgba(209, 106, 75, 0.28);
+/* 羊皮纸 —— 经典旧书色，底彩度压到 8 以内，正文对比 10:1 */
+:root[data-theme="sepia"] {
+  color-scheme: light;
+  --paper: #eae2ce;
+  --paper-deep: #e2d7c1;
+  --surface: rgba(250, 244, 229, 0.88);
+  --surface-solid: #faf4e5;
+  --surface-soft: #ece2cc;
+  --reader-bg: #f1ebdc;
+  --reader-ink: #3b3227;
+  --reader-heading: #2f281d;
+  --reader-link: #865939;
+  --reader-muted: #6b5e4c;
+  --reader-rule: rgba(92, 70, 38, 0.17);
+  --reader-code-bg: rgba(139, 87, 48, 0.07);
+  --reader-quote-bg: rgba(139, 87, 48, 0.045);
+  --text: #3b3227;
+  --text-soft: #4d4436;
+  --muted: #564a3b;
+  --faint: #615846;
+  --line: rgba(92, 70, 38, 0.14);
+  --line-strong: rgba(92, 70, 38, 0.25);
+  --accent: #8b5730;
+  --accent-strong: #704425;
+  --accent-soft: #ebdcc4;
+  --accent-ink: #fdf7ec;
+  --teal: #55655c;
+  --shadow: 0 20px 60px rgba(80, 58, 26, 0.13);
+  --shadow-small: 0 8px 24px rgba(80, 58, 26, 0.09);
+  --source-bg: #eee6d3;
+  --source-gutter: #e5dcc6;
+  --source-head-bg: #e9e0cb;
+  --source-active: rgba(139, 87, 48, 0.05);
+  --source-line: rgba(92, 70, 38, 0.12);
+  --source-text: #3b3227;
+  --source-text-strong: #2a231a;
+  --source-muted: #6b5e4c;
+  --source-syntax-heading: #865939;
+  --source-syntax-link: #46645b;
+  --source-syntax-code: #7a5638;
+  --source-syntax-quote: #5f5952;
+  --source-syntax-marker: #948a74;
+  --source-code-bg: rgba(139, 87, 48, 0.07);
+  --source-caret: #8b5730;
+  --source-search: rgba(190, 150, 80, 0.22);
+  --source-search-selected: rgba(139, 87, 48, 0.2);
+  --selection: rgba(139, 87, 48, 0.16);
 }
 
+/* 纯白 —— 中性高亮，保留纯白底但把正文与链接都压低一档 */
+:root[data-theme="white"] {
+  color-scheme: light;
+  --paper: #f4f4f5;
+  --paper-deep: #ededee;
+  --surface: rgba(255, 255, 255, 0.9);
+  --surface-solid: #fdfdfd;
+  --surface-soft: #f0f0f1;
+  --reader-bg: #ffffff;
+  --reader-ink: #2a2a2c;
+  --reader-heading: #212123;
+  --reader-link: #805434;
+  --reader-muted: #61616a;
+  --reader-rule: rgba(40, 40, 44, 0.14);
+  --reader-code-bg: rgba(130, 86, 53, 0.07);
+  --reader-quote-bg: rgba(130, 86, 53, 0.045);
+  --text: #2a2a2c;
+  --text-soft: #4a4a50;
+  --muted: #57575f;
+  --faint: #65656b;
+  --line: rgba(40, 40, 44, 0.12);
+  --line-strong: rgba(40, 40, 44, 0.22);
+  --accent: #8a5327;
+  --accent-strong: #6f4220;
+  --accent-soft: #f0e4d8;
+  --accent-ink: #fffaf4;
+  --teal: #52666a;
+  --shadow: 0 20px 60px rgba(40, 40, 44, 0.09);
+  --shadow-small: 0 8px 24px rgba(40, 40, 44, 0.07);
+  --source-bg: #f7f7f8;
+  --source-gutter: #eeeef0;
+  --source-head-bg: #f1f1f3;
+  --source-active: rgba(130, 86, 53, 0.05);
+  --source-line: rgba(40, 40, 44, 0.11);
+  --source-text: #2a2a2c;
+  --source-text-strong: #1d1d1f;
+  --source-muted: #61616a;
+  --source-syntax-heading: #825635;
+  --source-syntax-link: #46646b;
+  --source-syntax-code: #7a5c44;
+  --source-syntax-quote: #5f5f67;
+  --source-syntax-marker: #93939b;
+  --source-code-bg: rgba(130, 86, 53, 0.07);
+  --source-caret: #8a5327;
+  --source-search: rgba(190, 150, 80, 0.22);
+  --source-search-selected: rgba(130, 86, 53, 0.2);
+  --selection: rgba(130, 86, 53, 0.16);
+}
+
+/* 护眼 —— 柔和草绿，底彩度 4.3，链接改为低彩度墨绿 */
 :root[data-theme="eye"] {
   color-scheme: light;
-  --paper: #e8efe2;
-  --paper-deep: #dfe8d7;
-  --surface: rgba(247, 251, 242, 0.9);
-  --surface-solid: #f7fbf2;
-  --surface-soft: #e1ead9;
-  --text: #2c3a2e;
-  --text-soft: #536452;
-  --muted: #788875;
-  --faint: #9daa99;
-  --line: rgba(61, 88, 64, 0.16);
-  --line-strong: rgba(61, 88, 64, 0.28);
-  --accent: #4f7858;
-  --accent-strong: #3b6247;
-  --accent-soft: #d5e5d2;
-  --accent-ink: #f8fcf5;
-  --teal: #44705f;
-  --shadow: 0 20px 60px rgba(48, 73, 48, 0.12);
-  --shadow-small: 0 8px 24px rgba(48, 73, 48, 0.1);
-  --source-bg: #f1f6ec;
-  --source-gutter: #e8f0e1;
-  --source-head-bg: #eaf2e4;
-  --source-active: rgba(79, 120, 88, 0.06);
-  --source-line: rgba(61, 88, 64, 0.14);
-  --source-text: #2d3a2e;
-  --source-text-strong: #1f2d22;
-  --source-muted: #70806d;
-  --source-syntax-heading: #3d6b49;
-  --source-syntax-link: #3f6f73;
-  --source-syntax-code: #725b31;
-  --source-syntax-quote: #61705f;
-  --source-syntax-marker: #94a18f;
-  --source-code-bg: rgba(79, 120, 88, 0.075);
-  --source-caret: #4f7858;
-  --source-search: rgba(185, 147, 61, 0.26);
-  --source-search-selected: rgba(79, 120, 88, 0.24);
-  --selection: rgba(79, 120, 88, 0.2);
+  --paper: #e6ebe1;
+  --paper-deep: #dee3d9;
+  --surface: rgba(243, 247, 240, 0.88);
+  --surface-solid: #f3f7f0;
+  --surface-soft: #e6ecdf;
+  --reader-bg: #edf1e9;
+  --reader-ink: #29312a;
+  --reader-heading: #222a23;
+  --reader-link: #45684e;
+  --reader-muted: #566158;
+  --reader-rule: rgba(52, 78, 56, 0.15);
+  --reader-code-bg: rgba(69, 104, 78, 0.07);
+  --reader-quote-bg: rgba(69, 104, 78, 0.045);
+  --text: #29312a;
+  --text-soft: #434c46;
+  --muted: #4c564e;
+  --faint: #58625a;
+  --line: rgba(52, 78, 56, 0.13);
+  --line-strong: rgba(52, 78, 56, 0.24);
+  --accent: #45684e;
+  --accent-strong: #34513b;
+  --accent-soft: #d6e3d4;
+  --accent-ink: #f4faf3;
+  --teal: #47685e;
+  --shadow: 0 20px 60px rgba(46, 66, 44, 0.11);
+  --shadow-small: 0 8px 24px rgba(46, 66, 44, 0.09);
+  --source-bg: #e8eee3;
+  --source-gutter: #dee5d8;
+  --source-head-bg: #e3eade;
+  --source-active: rgba(69, 104, 78, 0.05);
+  --source-line: rgba(52, 78, 56, 0.12);
+  --source-text: #29312a;
+  --source-text-strong: #1d251e;
+  --source-muted: #566158;
+  --source-syntax-heading: #45684e;
+  --source-syntax-link: #3f625c;
+  --source-syntax-code: #6a5630;
+  --source-syntax-quote: #4e5f51;
+  --source-syntax-marker: #98a397;
+  --source-code-bg: rgba(69, 104, 78, 0.07);
+  --source-caret: #45684e;
+  --source-search: rgba(178, 142, 52, 0.22);
+  --source-search-selected: rgba(69, 104, 78, 0.2);
+  --selection: rgba(69, 104, 78, 0.16);
+}
+
+/* 豆沙 —— 中性米灰绿，长文阅读的柔和底色 */
+:root[data-theme="douchi"] {
+  color-scheme: light;
+  --paper: #e5e3d9;
+  --paper-deep: #dcdacf;
+  --surface: rgba(247, 246, 240, 0.88);
+  --surface-solid: #f7f6f0;
+  --surface-soft: #e9e7de;
+  --reader-bg: #edebe2;
+  --reader-ink: #34332d;
+  --reader-heading: #27261f;
+  --reader-link: #7d5836;
+  --reader-muted: #5f5c53;
+  --reader-rule: rgba(70, 68, 56, 0.15);
+  --reader-code-bg: rgba(125, 88, 54, 0.07);
+  --reader-quote-bg: rgba(125, 88, 54, 0.045);
+  --text: #34332d;
+  --text-soft: #46453e;
+  --muted: #4f4d45;
+  --faint: #5c5a52;
+  --line: rgba(70, 68, 56, 0.13);
+  --line-strong: rgba(70, 68, 56, 0.24);
+  --accent: #7d5836;
+  --accent-strong: #63462a;
+  --accent-soft: #e9ddcd;
+  --accent-ink: #fdf8f1;
+  --teal: #54685f;
+  --shadow: 0 20px 60px rgba(60, 58, 46, 0.1);
+  --shadow-small: 0 8px 24px rgba(60, 58, 46, 0.08);
+  --source-bg: #e8e6dc;
+  --source-gutter: #dedcd1;
+  --source-head-bg: #e2e0d6;
+  --source-active: rgba(125, 88, 54, 0.05);
+  --source-line: rgba(70, 68, 56, 0.12);
+  --source-text: #34332d;
+  --source-text-strong: #25241e;
+  --source-muted: #5f5c53;
+  --source-syntax-heading: #7d5836;
+  --source-syntax-link: #46645c;
+  --source-syntax-code: #74522a;
+  --source-syntax-quote: #5c5a51;
+  --source-syntax-marker: #a09c8f;
+  --source-code-bg: rgba(125, 88, 54, 0.07);
+  --source-caret: #7d5836;
+  --source-search: rgba(190, 145, 60, 0.22);
+  --source-search-selected: rgba(125, 88, 54, 0.2);
+  --selection: rgba(125, 88, 54, 0.16);
+}
+
+/* 夜读 —— 暖调低亮，夜间不刺眼 */
+:root[data-theme="night"] {
+  color-scheme: dark;
+  --paper: #161513;
+  --paper-deep: #11100f;
+  --surface: rgba(30, 28, 25, 0.88);
+  --surface-solid: #1e1c19;
+  --surface-soft: #282521;
+  --reader-bg: #1b1a17;
+  --reader-ink: #d6d0c6;
+  --reader-heading: #e4dfd6;
+  --reader-link: #bd9169;
+  --reader-muted: #a49b8f;
+  --reader-rule: rgba(235, 220, 198, 0.14);
+  --reader-code-bg: rgba(189, 145, 105, 0.1);
+  --reader-quote-bg: rgba(189, 145, 105, 0.05);
+  --text: #d6d0c6;
+  --text-soft: #b3aa9d;
+  --muted: #a49b8f;
+  --faint: #847c72;
+  --line: rgba(235, 220, 198, 0.11);
+  --line-strong: rgba(235, 220, 198, 0.2);
+  --accent: #bd9169;
+  --accent-strong: #cfa57f;
+  --accent-soft: #3a3026;
+  --accent-ink: #201a14;
+  --accent-fill: #3a3026;
+  --accent-fill-ink: #e2bd9c;
+  --accent-fill-hover: #493c30;
+  --brand-fill: #7a5436;
+  --brand-ink: #f6e2cd;
+  --teal: #8aa89d;
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.4);
+  --shadow-small: 0 8px 26px rgba(0, 0, 0, 0.3);
+  --source-bg: #171614;
+  --source-gutter: #121110;
+  --source-head-bg: #1d1b18;
+  --source-active: rgba(255, 255, 255, 0.04);
+  --source-line: rgba(235, 220, 198, 0.09);
+  --source-text: #d6d0c6;
+  --source-text-strong: #e9e3d9;
+  --source-muted: #988f83;
+  --source-syntax-heading: #cf9a72;
+  --source-syntax-link: #8fb5a8;
+  --source-syntax-code: #d1b193;
+  --source-syntax-quote: #b3aa9d;
+  --source-syntax-marker: #7c7367;
+  --source-code-bg: rgba(189, 145, 105, 0.1);
+  --source-caret: #c99a72;
+  --source-search: rgba(200, 165, 90, 0.2);
+  --source-search-selected: rgba(189, 145, 105, 0.24);
+  --selection: rgba(189, 145, 105, 0.24);
+}
+
+/* 墨夜 —— 中性冷调深色 */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --paper: #121316;
+  --paper-deep: #0e0f11;
+  --surface: rgba(27, 29, 34, 0.88);
+  --surface-solid: #1b1d22;
+  --surface-soft: #252830;
+  --reader-bg: #16171b;
+  --reader-ink: #d3d6dc;
+  --reader-heading: #e7e9ee;
+  --reader-link: #7fa5cf;
+  --reader-muted: #9ea3ad;
+  --reader-rule: rgba(216, 222, 232, 0.14);
+  --reader-code-bg: rgba(127, 165, 207, 0.1);
+  --reader-quote-bg: rgba(127, 165, 207, 0.05);
+  --text: #d3d6dc;
+  --text-soft: #a8adb7;
+  --muted: #9ea3ad;
+  --faint: #787d87;
+  --line: rgba(216, 222, 232, 0.1);
+  --line-strong: rgba(216, 222, 232, 0.19);
+  --accent: #7fa5cf;
+  --accent-strong: #9cbde0;
+  --accent-soft: #232d38;
+  --accent-ink: #12161c;
+  --accent-fill: #1e2a36;
+  --accent-fill-ink: #a8c6e6;
+  --accent-fill-hover: #27353f;
+  --brand-fill: #2f4a66;
+  --brand-ink: #cfe2f7;
+  --teal: #8fb8ac;
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+  --shadow-small: 0 8px 26px rgba(0, 0, 0, 0.32);
+  --source-bg: #131417;
+  --source-gutter: #0f1013;
+  --source-head-bg: #191b1f;
+  --source-active: rgba(255, 255, 255, 0.04);
+  --source-line: rgba(216, 222, 232, 0.08);
+  --source-text: #d3d6dc;
+  --source-text-strong: #eff1f4;
+  --source-muted: #8d939d;
+  --source-syntax-heading: #8fc0ea;
+  --source-syntax-link: #8fb8ac;
+  --source-syntax-code: #d6b28e;
+  --source-syntax-quote: #adb2bb;
+  --source-syntax-marker: #757b85;
+  --source-code-bg: rgba(127, 165, 207, 0.1);
+  --source-caret: #8fb4dd;
+  --source-search: rgba(190, 160, 90, 0.2);
+  --source-search-selected: rgba(127, 165, 207, 0.24);
+  --selection: rgba(127, 165, 207, 0.24);
+}
+
+/* 纯黑 —— OLED 真黑，像素全灭；正文刻意压暗一档以减少深色底上的光晕 */
+:root[data-theme="amoled"] {
+  color-scheme: dark;
+  --paper: #000000;
+  --paper-deep: #000000;
+  --surface: rgba(18, 18, 20, 0.9);
+  --surface-solid: #121214;
+  --surface-soft: #1c1c1f;
+  --reader-bg: #000000;
+  --reader-ink: #b6b6ba;
+  --reader-heading: #cdcdd1;
+  --reader-link: #74a4d4;
+  --reader-muted: #8c8c92;
+  --reader-rule: rgba(230, 230, 235, 0.15);
+  --reader-code-bg: rgba(116, 164, 212, 0.11);
+  --reader-quote-bg: rgba(116, 164, 212, 0.06);
+  --text: #b6b6ba;
+  --text-soft: #97979d;
+  --muted: #8c8c92;
+  --faint: #74747a;
+  --line: rgba(230, 230, 235, 0.11);
+  --line-strong: rgba(230, 230, 235, 0.2);
+  --accent: #74a4d4;
+  --accent-strong: #93bde5;
+  --accent-soft: #16202a;
+  --accent-ink: #080c10;
+  --accent-fill: #101b28;
+  --accent-fill-ink: #9cc2e8;
+  --accent-fill-hover: #16263a;
+  --brand-fill: #1b3350;
+  --brand-ink: #cfe2f7;
+  --teal: #7fbfae;
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  --shadow-small: 0 8px 26px rgba(0, 0, 0, 0.45);
+  --source-bg: #0a0a0b;
+  --source-gutter: #000000;
+  --source-head-bg: #101012;
+  --source-active: rgba(255, 255, 255, 0.05);
+  --source-line: rgba(230, 230, 235, 0.09);
+  --source-text: #b6b6ba;
+  --source-text-strong: #d8d8da;
+  --source-muted: #83838a;
+  --source-syntax-heading: #8ec2f0;
+  --source-syntax-link: #7fbfae;
+  --source-syntax-code: #d6b28e;
+  --source-syntax-quote: #a4a4aa;
+  --source-syntax-marker: #66666d;
+  --source-code-bg: rgba(116, 164, 212, 0.11);
+  --source-caret: #8fb9e8;
+  --source-search: rgba(190, 160, 90, 0.2);
+  --source-search-selected: rgba(116, 164, 212, 0.24);
+  --selection: rgba(116, 164, 212, 0.26);
+}
+
+/* 夜间主题统一标记，供结构性规则使用 */
+:root[data-theme="night"],
+:root[data-theme="dark"],
+:root[data-theme="amoled"] {
+  --theme-kind: dark;
 }
 
 * {
@@ -143,33 +467,14 @@ html {
 body {
   margin: 0;
   color: var(--text);
-  background:
-    radial-gradient(
-      circle at 8% 5%,
-      color-mix(in srgb, var(--accent) 8%, transparent),
-      transparent 24rem
-    ),
-    radial-gradient(
-      circle at 92% 90%,
-      color-mix(in srgb, var(--teal) 8%, transparent),
-      transparent 28rem
-    ),
-    var(--paper);
+  /* 纯色底：去掉顶光渐变，页面上下亮度一致，眼睛不需要持续重新适应 */
+  background: var(--paper);
   overflow: hidden;
 }
 
-body::before {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  content: "";
-  opacity: 0.25;
-  background-image:
-    linear-gradient(color-mix(in srgb, var(--text) 3%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--text) 2.5%, transparent) 1px, transparent 1px);
-  background-size: 30px 30px;
-  mask-image: radial-gradient(circle at center, black, transparent 90%);
+/* 灰度抗锯齿会把浅底深字削细，只在深色底上用它压住字形光晕 */
+:root[data-theme-kind="dark"] body {
+  -webkit-font-smoothing: antialiased;
 }
 
 button,
@@ -203,8 +508,10 @@ button:disabled {
 }
 
 a {
-  color: var(--accent);
-  text-decoration-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  color: var(--reader-link);
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in srgb, var(--reader-link) 38%, transparent);
+  text-decoration-thickness: 1px;
   text-underline-offset: 0.18em;
 }
 
@@ -220,7 +527,12 @@ a {
 ::-webkit-scrollbar-thumb {
   border: 3px solid transparent;
   border-radius: 99px;
-  background: color-mix(in srgb, var(--muted) 45%, transparent);
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--muted) 62%, transparent);
   background-clip: padding-box;
 }
 

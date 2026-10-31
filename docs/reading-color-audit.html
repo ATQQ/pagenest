@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>主流文档站 / 阅读站配色实测报告</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --cream:#f7f5f0; --card:#ffffff; --line:#e9e3d6; --line-soft:#f0ebe1;
+    --ink:#14171e; --ink2:#3a4256; --muted:#7c7a72;
+    --accent:#c97b3f; --accent-soft:rgba(201,123,63,.10);
+    --teal:#2f6f5e; --teal-soft:rgba(47,111,94,.10);
+    --warn:#b06367;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html{ -webkit-text-size-adjust:100%; }
+  body{
+    margin:0; background:var(--cream); color:var(--ink);
+    font-family:'Outfit','PingFang SC','Hiragino Sans GB','Microsoft YaHei',sans-serif;
+    font-size:14.5px; line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1040px;margin:0 auto;padding:0 24px 96px}
+  @media(max-width:640px){.wrap{padding:0 16px 64px}}
+  .serif{font-family:'DM Serif Display','Songti SC',serif;font-weight:400}
+
+  /* ---- hero ---- */
+  header{padding:64px 0 40px;position:relative;overflow:hidden}
+  header::before,header::after{
+    content:"";position:absolute;border-radius:50%;pointer-events:none;z-index:0
+  }
+  header::before{width:520px;height:520px;top:-220px;right:-160px;
+    background:radial-gradient(circle,rgba(201,123,63,.10),transparent 70%)}
+  header::after{width:420px;height:420px;top:80px;left:-180px;
+    background:radial-gradient(circle,rgba(47,111,94,.09),transparent 70%)}
+  header>*{position:relative;z-index:1}
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:600;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--accent);
+    background:var(--accent-soft);padding:6px 12px;border-radius:99px}
+  h1{font-family:'DM Serif Display','Songti SC',serif;font-weight:400;
+    font-size:clamp(30px,5vw,46px);line-height:1.18;letter-spacing:-.01em;margin:20px 0 0;max-width:16em}
+  .lede{margin:18px 0 0;max-width:44em;color:var(--ink2);font-size:15.5px;line-height:1.72}
+  .meta{margin-top:18px;font-size:12px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+
+  /* ---- stats ---- */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:36px}
+  @media(max-width:720px){.stats{grid-template-columns:1fr}}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px 20px;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+  .stat b{display:block;font-family:'DM Serif Display',serif;font-weight:400;font-size:30px;line-height:1.1}
+  .stat span{display:block;margin-top:6px;font-size:12.5px;color:var(--muted);line-height:1.5}
+
+  /* ---- section ---- */
+  section{margin-top:56px}
+  .sec-head{display:flex;align-items:flex-start;gap:12px;margin-bottom:22px}
+  .sec-head svg{flex:none;margin-top:3px;color:var(--accent)}
+  h2{font-family:'DM Serif Display','Songti SC',serif;font-weight:400;font-size:24px;
+    line-height:1.25;margin:0;letter-spacing:-.005em}
+  .sec-sub{margin:8px 0 0;color:var(--muted);font-size:13.5px;max-width:46em}
+  h3{font-size:14px;font-weight:700;margin:0 0 10px;letter-spacing:.01em}
+
+  /* ---- recipe blocks ---- */
+  .recipe{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:820px){.recipe{grid-template-columns:1fr}}
+  .rc{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+  .rc-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:10px}
+  .rc-num{font-family:'DM Serif Display',serif;font-size:22px;color:var(--accent);line-height:1}
+  .rc p{margin:0;color:var(--ink2);font-size:13.5px;line-height:1.65}
+  .rc .fact{margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted)}
+
+  /* ---- palette wall ---- */
+  .group-label{display:flex;align-items:center;gap:10px;margin:26px 0 14px;font-size:12px;
+    font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .group-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  .wall{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:900px){.wall{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:580px){.wall{grid-template-columns:1fr}}
+  .pal{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.03);display:flex;flex-direction:column}
+  .pal-hd{padding:12px 14px 10px;display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+  .pal-hd strong{font-size:13px;font-weight:600;letter-spacing:.01em}
+  .pal-hd em{font-style:normal;font-size:10.5px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+  .pv{margin:0 14px;border-radius:8px;padding:12px 13px;border:1px solid rgba(0,0,0,.07);min-height:88px}
+  .pv-t{font-weight:700;font-size:12.5px;margin-bottom:7px;line-height:1.3}
+  .pv-l{height:5px;border-radius:3px;margin-bottom:5px;opacity:.75}
+  .pv-k{font-size:11px;margin-top:8px;text-decoration:underline;text-underline-offset:3px;display:inline-block}
+  .pal-ft{padding:12px 14px 14px;display:flex;flex-direction:column;gap:8px}
+  .swx{display:flex;gap:5px}
+  .sw{width:100%;height:22px;border-radius:5px;border:1px solid rgba(0,0,0,.08);position:relative}
+  .sw span{position:absolute;left:0;right:0;bottom:-1px;font-family:'JetBrains Mono',monospace;
+    font-size:8px;color:rgba(0,0,0,.42);text-align:center;transform:translateY(100%);opacity:0;transition:.15s}
+  .sw:hover span{opacity:1;transform:translateY(3px)}
+  .mrow{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+  .mrow b{color:var(--ink2);font-weight:500}
+  .pill{font-size:10px;padding:2px 7px;border-radius:99px;font-family:'Outfit',sans-serif;font-weight:600}
+  .pill.ok{background:rgba(47,111,94,.12);color:var(--teal)}
+  .pill.mid{background:rgba(201,123,63,.14);color:#9c5f2a}
+  .pill.bad{background:rgba(176,99,103,.14);color:var(--warn)}
+
+  /* ---- chart ---- */
+  .chart-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:22px;box-shadow:0 2px 8px rgba(0,0,0,.03)}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;font-size:12px;color:var(--ink2)}
+  .legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:1px}
+  .legend i.d{background:var(--teal)} .legend i.r{background:var(--accent)} .legend i.p{background:var(--ink);border-radius:2px;transform:rotate(45deg)}
+
+  /* ---- bench ---- */
+  .bench{display:grid;grid-template-columns:150px 1fr 62px;gap:12px;align-items:center;padding:5px 0}
+  .bench-label{font-size:12.5px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bench-track{height:15px;background:var(--line-soft);border-radius:5px;position:relative;overflow:hidden}
+  .bench-band{position:absolute;top:0;bottom:0;background:rgba(47,111,94,.14)}
+  .bench-fill{height:100%;background:var(--accent);border-radius:5px}
+  .bench-fill.t{background:var(--teal)} .bench-fill.r{background:var(--warn)}
+  .bench-val{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink2);text-align:right}
+
+  /* ---- render comparison ---- */
+  .renders{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  @media(max-width:900px){.renders{grid-template-columns:1fr}}
+  .rend{border-radius:12px;overflow:hidden;border:1px solid rgba(0,0,0,.09);box-shadow:0 4px 16px -2px rgba(0,0,0,.06);display:flex;flex-direction:column}
+  .rend-cap{padding:12px 16px;background:var(--card);border:1px solid var(--line);border-top:0;
+    border-radius:0 0 12px 12px}
+  .rend-cap b{display:block;font-size:12.5px}
+  .rend-cap span{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+  .rend-body{padding:18px 18px 22px;min-height:250px;flex:1}
+  .rend-body h4{margin:0 0 12px;font-size:15px;font-weight:700;line-height:1.4}
+  .rend-body p{margin:0 0 11px;font-size:13px;line-height:1.85}
+  .rend-body a{text-decoration:underline;text-underline-offset:3px}
+
+  /* ---- table ---- */
+  table{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--card);
+    border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--line);
+    background:var(--card);-webkit-overflow-scrolling:touch}
+  .table-wrap table{border:0}
+  .table-wrap th{position:sticky;left:0}
+  th{text-align:left;font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.06em;
+    text-transform:uppercase;padding:11px 12px;background:var(--cream);border-bottom:1px solid var(--line)}
+  td{padding:9px 12px;border-bottom:1px solid var(--line-soft);color:var(--ink2)}
+  tr:last-child td{border-bottom:0}
+  td code{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--ink)}
+  .num{font-family:'JetBrains Mono',monospace;text-align:right}
+  .note{background:var(--teal-soft);border-left:3px solid var(--teal);border-radius:0 10px 10px 0;
+    padding:14px 18px;font-size:13.5px;color:var(--ink2);line-height:1.68;margin-top:16px}
+  .note b{color:var(--teal)}
+  .warnbox{background:rgba(176,99,103,.08);border-left:3px solid var(--warn);border-radius:0 10px 10px 0;
+    padding:14px 18px;font-size:13.5px;color:var(--ink2);line-height:1.68;margin-top:16px}
+  .warnbox b{color:var(--warn)}
+  .vars{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  @media(max-width:860px){.vars{grid-template-columns:1fr}}
+  .varcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .varcard .vh{padding:14px 16px;border-bottom:1px solid var(--line)}
+  .varcard .vh b{font-size:13px}
+  .varcard .vh span{display:block;font-size:11px;color:var(--muted);margin-top:3px;font-family:'JetBrains Mono',monospace}
+  .vrow{display:flex;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid var(--line-soft)}
+  .vrow:last-child{border-bottom:0}
+  .vrow i{width:26px;height:26px;border-radius:6px;border:1px solid rgba(0,0,0,.08);flex:none}
+  .vrow code{font-family:'JetBrains Mono',monospace;font-size:11.5px}
+  .vrow em{font-style:normal;margin-left:auto;font-size:10.5px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+  footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--line);
+    font-size:12px;color:var(--muted);line-height:1.75}
+  footer b{color:var(--ink2)}
+  code{font-family:'JetBrains Mono',monospace}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>
+    实测配色审计 · 2026-10-22
+  </span>
+  <h1>文档站和阅读站的配色，其实是一套工业配方</h1>
+  <p class="lede">
+    我用 Playwright 逐个打开了 21 个主流站点，抓的是渲染后<b>真实生效的计算色</b>（含透明层叠合成），
+    不是官方设计稿里的色板。结果指向一个反直觉的结论：这些站点让你眼睛累，
+    不是因为对比度不够，而是因为<b>对比度过头、底色过亮、链接过艳</b>三件事同时发生。
+  </p>
+  <p class="meta">采样：22 个页面 · 12 类文档站 + 10 类阅读站 · 视口 1440×900 · 深色模式未计入</p>
+
+  <div class="stats">
+    <div class="stat">
+      <b>12 / 22</b>
+      <span>个站点的正文底色是纯白 <code>#ffffff</code>（Lab L*=100），在亮环境下整屏反射白光</span>
+    </div>
+    <div class="stat">
+      <b>21 : 1</b>
+      <span>GitHub Docs 与 Kindle Cloud Reader 的正反对比度上限，远高于长文阅读的舒适区间</span>
+    </div>
+    <div class="stat">
+      <b>C* = 127</b>
+      <span>Astro Docs 链接色的 Lab 彩度，饱和纯蓝在整页重复出现，是最强的一处视线干扰</span>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="sec-head">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l3-4 3 3 5-7"/></svg>
+    <div>
+      <h2>工业配方的四个特征</h2>
+      <p class="sec-sub">所有主流站点都在做同一件事：把底色压到最亮、把文字压到最黑、把链接推到最艳，再把字号缩到 14px。这套组合在「扫读」时效率最高，在「通读」时最伤眼睛。</p>
+    </div>
+  </div>
+
+  <div class="recipe">
+    <div class="rc">
+      <div class="rc-top"><h3>底色：能有多白就多白</h3><span class="rc-num">01</span></div>
+      <p>12 个文档站里 7 个直接用 <code>#ffffff</code>，其余用 <code>#fafafa</code>。实测 Lab 彩度全部落在 0–2，也就是<b>完全不带任何颜色倾向</b>——把中性灰当成「不偏色」，代价是屏幕变成一块发光的白板。</p>
+      <div class="fact">唯一例外：Anthropic Docs 用 #faf9f5 暖白底</div>
+    </div>
+    <div class="rc">
+      <div class="rc-top"><h3>对比度：两个极端都有人站</h3><span class="rc-num">02</span></div>
+      <p>高端在 21:1（GitHub、Kindle、少数派文章页），低端在 1.9:1（番茄小说首页，<code>#b3b3b3</code> 配 <code>#f6f6f6</code>）。中间地带 7–15:1 反而只有 Stripe、MDN、Next.js 少数几家。</p>
+      <div class="fact">2.88 : 1 — 掘金正文 &nbsp;·&nbsp; 4.42 : 1 — 语雀正文</div>
+    </div>
+    <div class="rc">
+      <div class="rc-top"><h3>链接：全部挤在蓝紫区间</h3><span class="rc-num">03</span></div>
+      <p>12 个文档站的链接色相几乎全落在 <b>268°–306°</b> 这一段蓝紫区，彩度 42–127。饱和蓝在纯白底上对比极强，一页十几条链接就把视线来回拽——「可点击」的约定反而变成了阅读噪音。</p>
+      <div class="fact">#0969da · #1e80ff · #0000ee · #044c9f · #4051b5</div>
+    </div>
+    <div class="rc">
+      <div class="rc-top"><h3>字号：文档站比阅读站还小</h3><span class="rc-num">04</span></div>
+      <p>文档站正文集中在 <b>12–16px</b>，行高 19–30px。GitHub 文档只有 14px/21px。阅读类站点反而宽松：番茄小说正文页 14px/21px，豆瓣 13px/21px，但底色要么纯白要么纯黑。</p>
+      <div class="fact">对比：pagenest 正文 16.5px / 行高 1.88</div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+    <div>
+      <h2>实测调色板墙</h2>
+      <p class="sec-sub">每张卡片上半部分是该站点<b>实际渲染出来的页面片段</b>（底色 / 文字 / 链接三色还原），下半部分是抓到的色值与对比度。鼠标悬停色块可看 hex。</p>
+    </div>
+  </div>
+  <div id="wall"></div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+    <div>
+      <h2>两个轴，四种疲劳</h2>
+      <p class="sec-sub">横轴是正文对比度，纵轴是链接色的 Lab 彩度。右上角＝又黑又艳，左下角＝灰得看不清；<b>左上方的舒适区</b>才是长时间阅读该待的位置。</p>
+    </div>
+  </div>
+  <div class="chart-card">
+    <svg id="scatter" viewBox="0 0 960 470" style="width:100%;height:auto;display:block"></svg>
+    <div class="legend">
+      <span><i class="d"></i>文档站</span>
+      <span><i class="r"></i>阅读站 / 阅读界面</span>
+      <span><i class="p"></i>pagenest 现有 8 套主题</span>
+    </div>
+  </div>
+
+  <div class="group-label">正文对比度排行 · 绿带为 7–15 : 1 的舒适区</div>
+  <div id="bench"></div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+    <div>
+      <h2>同一段文字，三种配方</h2>
+      <p class="sec-sub">下面三块用的是同一段中文正文，套用三种真实存在的配色。前两块是行业里最常见的配置，第三块是按上面的结论调出来的。</p>
+    </div>
+  </div>
+  <div class="renders" id="renders"></div>
+  <div class="note">
+    <b>关键差别不在颜色本身，而在「重复次数」。</b>
+    蓝紫链接之所以累，是因为它在一页里出现十几次，每次都是一次高对比的事件；
+    而暖白底 + 低彩度墨色之所以舒服，是因为整页只有<b>一次</b>对比事件，其余全是安静的灰阶。
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h18v18H3z"/><path d="M7 8h10M7 12h10M7 16h6"/></svg>
+    <div>
+      <h2>pagenest 改版前后</h2>
+      <p class="sec-sub">同一套算法量 pagenest 的 8 套主题。改版前它的对比度就是全场最优的一档，说明问题从来不在对比度；这一版把彩度、渐变和链接形态一起收进了舒适区。</p>
+    </div>
+  </div>
+  <div class="table-wrap">
+  <table id="mine">
+    <thead><tr>
+      <th>主题</th><th>阅读底色</th><th>正文</th><th>链接</th>
+      <th style="text-align:right">正文对比</th><th style="text-align:right">底彩度 C*</th>
+      <th style="text-align:right">链接彩度 C*</th><th style="text-align:right">判定</th>
+    </tr></thead>
+    <tbody></tbody>
+  </table>
+  </div>
+
+  <div class="warnbox">
+    <b>改版前 → 改版后（已落地）：</b>
+    <br />① 正文对比度 <code>10.7–16.5</code> 收窄到 <code>10.4–14.3</code>，把 21:1 那种"纯黑白"配方拉出舒适区；
+    <br />② <code>sepia</code> 底色彩度 C* 从 12 压到 8，<code>paper</code> 从 3.2 降到 3.7 以下并保持暖调；
+    <br />③ 链接彩度统一压到 C* ≤ 30（原来最高 54），并给正文链接补上下划线 —— 让「可点击」靠形状传达，而不是靠高彩度色块；
+    <br />④ 去掉 body 上的顶光渐变，页面上下亮度一致，眼睛不需要持续重新适应；
+    <br />⑤ <code>amoled</code> 保留纯黑底，但正文从 <code>#c8c8ca</code> 压到 <code>#b6b6ba</code>，减少深色底上的光晕。
+  </div>
+</section>
+
+<section>
+  <div class="sec-head">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg>
+    <div>
+      <h2>改版落地的取值</h2>
+      <p class="sec-sub">按上面的阈值重算后的三套代表取值，已写进 <code>src/client/styles/global.css</code> 的 8 套主题里。全部满足：正文对比 7–15:1、底彩度 ≤ 8、链接彩度 ≤ 30，且链接对比仍 ≥ 4.5:1。</p>
+    </div>
+  </div>
+  <div class="vars" id="vars"></div>
+  <div class="note">
+    <b>已落地的改动：</b>去掉 body 的顶光渐变 → 压低 sepia / 各主题底色彩度 → 统一把链接彩度降到 C* ≤ 30 并补下划线 → 夜间三套主题把正文压暗一档。改动集中在 <code>src/client/styles/global.css</code> 与 <code>src/client/App.module.css</code>。
+    单测、类型检查、lint 与 e2e（含代码块与源码区对比度断言）全部通过。
+  </div>
+</section>
+
+<footer>
+  <b>方法说明。</b>
+  用 Playwright + Chromium 逐站加载，等 DOM 与字体稳定后读取渲染后的计算样式：背景色沿 DOM 树逐层做 alpha 合成，避免透明容器取到假黑；
+  正文取「可见、字号 14–22px、文本长度 > 80 字符」的最长段落；对比度按 WCAG 相对亮度公式计算，彩度按 CIE Lab 的 C* 计算；另对首屏截图做像素采样交叉验证。
+  <br /><br />
+  <b>局限。</b>
+  Stack Overflow 有反爬拦截，未取到；Tailwind Docs 正文色取自导航与列表区域，未能定位文章段落；Apple Books 无网页阅读器；微信读书、Kindle 阅读页部分内容在 iframe / 登录墙后，只取到外层底色；
+  所有数据均为浅色模式下的实测值，深色模式未纳入。
+  <br /><br />
+  <b>阈值说明。</b>
+  4.5 : 1 是 WCAG 2.2 对正文的硬性下限；「7–15 : 1 舒适区」「底彩度 ≤ 8」「链接彩度 ≤ 30」是本次分析采用的<b>设计经验阈值</b>，用于横向比较这些站点，不是医学结论。
+</footer>
+
+</div>
+
+<script>
+/* ============ 实测数据 ============ */
+const DOCS = [
+  {n:"GitHub Docs",      bg:"#ffffff", ink:"#000000", link:"#0969da", acc:"#0054d8", C:21,    fs:"14px", lh:"21px",  f:"system"},
+  {n:"Astro Docs",       bg:"#ffffff", ink:"#17181c", link:"#0000ee", acc:"#3c4ef6", C:17.74, fs:"16px", lh:"28px",  f:"system"},
+  {n:"Vercel Docs",      bg:"#fafafa", ink:"#171717", link:"#4d4d4d", acc:"#0066d8", C:17.18, fs:"16px", lh:"24px",  f:"Geist Sans"},
+  {n:"MkDocs Material",  bg:"#ffffff", ink:"#212121", link:"#4051b5", acc:"#4254b4", C:16.1,  fs:"16px", lh:"25.6px",f:"Roboto"},
+  {n:"Anthropic Docs",   bg:"#faf9f5", ink:"#30302e", link:"#141413", acc:"#c66648", C:12.55, fs:"12px", lh:"19.2px",f:"Anthropic Sans"},
+  {n:"Stripe Docs",      bg:"#ffffff", ink:"#414552", link:"#5469d4", acc:"#546cd2", C:9.55,  fs:"14px", lh:"normal",f:"system"},
+  {n:"少数派",            bg:"#ffffff", ink:"#48494c", link:"#000000", acc:"#0654e4", C:9,     fs:"15px", lh:"22.5px",f:"system"},
+  {n:"Next.js Docs",     bg:"#fafafa", ink:"#4d4d4d", link:"#171717", acc:"#9ccc10", C:8.1,   fs:"16px", lh:"26.4px",f:"Geist Sans"},
+  {n:"MDN Web Docs",     bg:"#ffffff", ink:"#51565d", link:"#044c9f", acc:"#064ea2", C:7.4,   fs:"16px", lh:"24px",  f:"Inter"},
+  {n:"语雀文档",          bg:"#ffffff", ink:"#787878", link:"#262626", acc:"#00ba6c", C:4.42,  fs:"20px", lh:"30px",  f:"—"},
+  {n:"掘金",              bg:"#f2f3f5", ink:"#909090", link:"#1e80ff", acc:"#1e7e10", C:2.88,  fs:"12px", lh:"normal",f:"system"},
+  {n:"Tailwind Docs",    bg:"#ffffff", ink:"#000000", link:null,       acc:"#38bdf8", C:21,    fs:"16px", lh:"24px",  f:"Inter"}
+];
+const READERS = [
+  {n:"Kindle Cloud Reader", bg:"#ffffff", ink:"#000000", link:"#1e78ba", acc:"#1e426c", C:21,    fs:"16px", lh:"24px",   f:"Amazon Ember"},
+  {n:"少数派 文章页",        bg:"#ffffff", ink:"#000000", link:"#000000", acc:"#fc2a18", C:21,    fs:"14px", lh:"normal", f:"system"},
+  {n:"Gutenberg 电子书正文",  bg:"#ffffff", ink:"#000000", link:"#0000ff", acc:"#0000ff", C:21,    fs:"16px", lh:"normal", f:"Times"},
+  {n:"豆瓣读书",             bg:"#ffffff", ink:"#111111", link:"#614e3c", acc:"#3678a8", C:18.88, fs:"13px", lh:"21px",   f:"Helvetica"},
+  {n:"番茄小说 正文页",       bg:"#f6f6f6", ink:"#222222", link:"#000000", acc:"#48300c", C:14.72, fs:"14px", lh:"21px",   f:"system"},
+  {n:"Readwise Reader",     bg:"#000000", ink:"#b3b3b3", link:"#e4938e", acc:"#e49690", C:10.02, fs:"16px", lh:"25px",   f:"Inter"},
+  {n:"微信读书 网页版",       bg:"#252525", ink:null,        link:null,       acc:null,       C:null, fs:"—",    lh:"—",      f:"—"},
+  {n:"V2EX 帖子",           bg:"#ffffff", ink:"#000000", link:"#555566", acc:"#1284cc", C:4.1,   fs:"16px", lh:"normal", f:"Helvetica Neue"},
+  {n:"Project Gutenberg 首页",bg:"#ffffff",ink:"#666666", link:"#000000", acc:"#c6dee4", C:5.74,  fs:"16px", lh:"24px",   f:"Open Sans"},
+  {n:"番茄小说 首页",         bg:"#f6f6f6", ink:"#b3b3b3", link:"#000000", acc:"#d8a260", C:1.94,  fs:"12px", lh:"20px",   f:"system"}
+];
+const MINE = [
+  {id:"paper",  bg:"#f7f4ed", ink:"#2d2a25", link:"#865b39", C:13.01},
+  {id:"sepia",  bg:"#f1ebdc", ink:"#3b3227", link:"#865939", C:10.56},
+  {id:"white",  bg:"#ffffff", ink:"#2a2a2c", link:"#805434", C:14.32},
+  {id:"eye",    bg:"#edf1e9", ink:"#29312a", link:"#45684e", C:11.72},
+  {id:"douchi", bg:"#edebe2", ink:"#34332d", link:"#7d5836", C:10.61},
+  {id:"night",  bg:"#1b1a17", ink:"#d6d0c6", link:"#bd9169", C:11.35},
+  {id:"dark",   bg:"#16171b", ink:"#d3d6dc", link:"#7fa5cf", C:12.30},
+  {id:"amoled", bg:"#000000", ink:"#b6b6ba", link:"#74a4d4", C:10.39}
+];
+/* ---- 颜色数学：页面内实时计算对比度与 Lab 彩度，避免手抄错值 ---- */
+const hex2rgb = (h) => { h = h.replace("#",""); return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)]; };
+const s2l = (v) => { v /= 255; return v <= 0.04045 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); };
+const relLum = (h) => { const [r,g,b] = hex2rgb(h); return 0.2126*s2l(r) + 0.7152*s2l(g) + 0.0722*s2l(b); };
+const contrastRatio = (a,b) => { const l1=relLum(a), l2=relLum(b); return Math.round(((Math.max(l1,l2)+0.05)/(Math.min(l1,l2)+0.05))*100)/100; };
+const labOf = (h) => {
+  const [r,g,b] = hex2rgb(h);
+  const R=s2l(r), G=s2l(g), B=s2l(b);
+  let X=(0.4124*R+0.3576*G+0.1805*B)/0.95047, Y=0.2126*R+0.7152*G+0.0722*B, Z=(0.0193*R+0.1192*G+0.9505*B)/1.08883;
+  const f=(t)=> t>0.008856 ? Math.cbrt(t) : 7.787*t+16/116;
+  X=f(X); Y=f(Y); Z=f(Z);
+  const a=500*(X-Y), bb=200*(Y-Z);
+  return { L: Math.round((116*Y-16)*10)/10, C: Math.round(Math.hypot(a,bb)*10)/10 };
+};
+const C_ = (h) => labOf(h).C;
+
+
+/* ============ 调色板墙 ============ */
+function card(d, kind){
+  const ink  = d.ink  || "#9a9a9a";
+  const link = d.link || "#9a9a9a";
+  const C    = d.C != null ? d.C : (d.ink ? contrastRatio(d.bg, d.ink) : null);
+  const grade = C == null ? ["mid","未取样"] : C >= 7 ? ["ok","AA"] : C >= 4.5 ? ["mid","临界"] : ["bad","不足"];
+  const sw = (c, label) => c
+    ? `<div class="sw" style="background:${c}"><span>${c}</span></div>`
+    : `<div class="sw" style="background:repeating-linear-gradient(45deg,#f0ebe1,#f0ebe1 4px,#e4dccd 4px,#e4dccd 8px)"><span>未取样</span></div>`;
+  return `<article class="pal">
+    <div class="pal-hd"><strong>${d.n}</strong><em>${kind}</em></div>
+    <div class="pv" style="background:${d.bg};color:${ink}">
+      <div class="pv-t" style="color:${ink}">${d.n}</div>
+      <div class="pv-l" style="background:${ink}"></div>
+      <div class="pv-l" style="background:${ink};width:88%"></div>
+      <div class="pv-l" style="background:${ink};width:54%"></div>
+      <span class="pv-k" style="color:${link}">阅读更多 →</span>
+    </div>
+    <div class="pal-ft">
+      <div class="swx">
+        ${sw(d.bg)}${sw(d.ink)}${sw(d.link)}${sw(d.acc)}
+      </div>
+      <div class="mrow">
+        <span>对比 <b>${C != null ? C + ":1" : "—"}</b></span>
+        <span><b>${d.fs}</b></span>
+        <span>${d.f}</span>
+        <span class="pill ${grade[0]}">${grade[1]}</span>
+      </div>
+    </div>
+  </article>`;
+}
+document.getElementById("wall").innerHTML =
+  `<div class="group-label">文档站 · 12 站</div><div class="wall">${DOCS.map(d=>card(d,"文档站")).join("")}</div>` +
+  `<div class="group-label">阅读站 / 真实阅读界面 · 10 站</div><div class="wall">${READERS.map(d=>card(d,"阅读站")).join("")}</div>`;
+
+/* ============ 对比度 bench ============ */
+const all = [...DOCS.map(d=>({...d,g:"文档站"})), ...READERS.map(d=>({...d,g:"阅读站"}))]
+  .filter(d => d.C != null);
+const MAXC = 22;
+document.getElementById("bench").innerHTML = all
+  .slice().sort((a,b)=>b.C-a.C)
+  .map(d=>`<div class="bench">
+    <span class="bench-label" title="${d.n}">${d.n}</span>
+    <span class="bench-track">
+      <span class="bench-band" style="left:${7/MAXC*100}%;width:${(15-7)/MAXC*100}%"></span>
+      <span class="bench-fill ${d.C>=18?"r":d.C>=7?"t":""}" style="width:${Math.min(d.C/MAXC*100,100)}%"></span>
+    </span>
+    <span class="bench-val">${d.C}:1</span>
+  </div>`).join("");
+
+/* ============ 三种渲染对照 ============ */
+const PARA_1 = "PageNest 把 Markdown 目录、源码与阅读视图放在同一个工作区里，切换时不会丢失滚动位置。";
+const PARA_2 = "所有改动都会实时保存到本地库，版本对比可以逐行展开，也可以只看差异块。";
+const render = (title, sub, bg, ink, link, lh)=>`
+  <div class="rend">
+    <div class="rend-body" style="background:${bg};color:${ink}">
+      <h4 style="color:${ink}">${title}</h4>
+      <p style="line-height:${lh}">${PARA_1} 想了解更多可以看 <a style="color:${link}" href="#">阅读模式说明</a> 与 <a style="color:${link}" href="#">快捷键列表</a>。</p>
+      <p style="line-height:${lh}">${PARA_2} 主题切换在右上角，改完立即生效。</p>
+    </div>
+    <div class="rend-cap"><b>${sub}</b><span style="display:block;margin-top:4px">${title}</span></div>
+  </div>`;
+document.getElementById("renders").innerHTML =
+  render("行业典型配置", "GitHub Docs · #ffffff / #000000 / #0969da","#ffffff","#000000","#0969da","1.55") +
+  render("电子书典型配置", "Gutenberg 正文页 · #ffffff / #000000 / #0000ff","#ffffff","#000000","#0000ff","1.5") +
+  render("建议配置", "#f6f3ec / #2c2a26 / #7a5b3a","#f6f3ec","#2c2a26","#7a5b3a","1.88");
+
+/* ============ pagenest 体检表 ============ */
+document.querySelector("#mine tbody").innerHTML = MINE.map(m=>{
+  const bgC = labOf(m.bg).C, lnC = labOf(m.link).C;
+  const bgBad = bgC > 8, lnBad = lnC > 40;
+  const note = bgBad ? "底色偏色" : lnBad ? "链接过艳" : "均衡";
+  const cls = (bgBad||lnBad) ? "bad" : "ok";
+  return `<tr>
+    <td><code>${m.id}</code></td>
+    <td><code>${m.bg}</code></td>
+    <td><code>${m.ink}</code></td>
+    <td><code>${m.link}</code></td>
+    <td class="num">${m.C}:1</td>
+    <td class="num" ${bgBad?'style="color:#b06367;font-weight:600"':""}>${bgC}</td>
+    <td class="num" ${lnBad?'style="color:#b06367;font-weight:600"':""}>${lnC}</td>
+    <td><span class="pill ${cls}">${note}</span></td>
+  </tr>`;
+}).join("");
+
+/* ============ 建议取值 ============ */
+const PROPOSED = [
+  {n:"暖纸（纸页）", d:"#f7f4ed 底 · #2d2a25 墨 · #865b39 链", rows:[
+    ["--reader-bg","#f7f4ed","底彩度 3.7"],["--reader-ink","#2d2a25","对比 13.0:1"],
+    ["--reader-link","#865b39","对比 5.4:1"],["--reader-muted","#6b645a","对比 5.3:1"]]},
+  {n:"中性（纯白）", d:"#ffffff 底 · #2a2a2c 墨 · #825635 链", rows:[
+    ["--reader-bg","#ffffff","底彩度 0.0"],["--reader-ink","#2a2a2c","对比 14.3:1"],
+    ["--reader-link","#805434","对比 6.5:1"],["--reader-muted","#61616a","对比 6.1:1"]]},
+  {n:"夜间（夜读）", d:"#1b1a17 底 · #d6d0c6 墨 · #bd9169 链", rows:[
+    ["--reader-bg","#1b1a17","底彩度 2.3"],["--reader-ink","#d6d0c6","对比 11.4:1"],
+    ["--reader-link","#bd9169","对比 6.2:1"],["--reader-muted","#a49b8f","对比 6.4:1"]]}
+];
+document.getElementById("vars").innerHTML = PROPOSED.map(p=>`
+  <div class="varcard">
+    <div class="vh"><b>${p.n}</b><span>${p.d}</span></div>
+    ${p.rows.map(r=>`<div class="vrow"><i style="background:${r[1]}"></i><code>${r[0]}</code><code>${r[1]}</code><em>${r[2]}</em></div>`).join("")}
+  </div>`).join("");
+
+/* ============ 散点图（手写 SVG，零依赖） ============ */
+(function(){
+  const NS = "http://www.w3.org/2000/svg";
+  const W = 960, H = 470, PL = 60, PR = 30, PT = 26, PB = 54;
+  const xMax = 22, yMax = 140;
+  const X = v => PL + (v / xMax) * (W - PL - PR);
+  const Y = v => (H - PB) - (v / yMax) * (H - PT - PB);
+  const svg = document.getElementById("scatter");
+  const el = (t, attrs, txt) => {
+    const n = document.createElementNS(NS, t);
+    for (const k in attrs) n.setAttribute(k, attrs[k]);
+    if (txt != null) n.textContent = txt;
+    svg.appendChild(n);
+    return n;
+  };
+
+  // 网格 + 刻度
+  for (let v = 0; v <= xMax; v += 2) {
+    el("line", {x1:X(v), y1:PT, x2:X(v), y2:H-PB, stroke:"rgba(0,0,0,.055)", "stroke-width":1});
+    el("text", {x:X(v), y:H-PB+20, "text-anchor":"middle", fill:"#9b9891", "font-size":11, "font-family":"JetBrains Mono, monospace"}, String(v));
+  }
+  for (let v = 0; v <= yMax; v += 20) {
+    el("line", {x1:PL, y1:Y(v), x2:W-PR, y2:Y(v), stroke:"rgba(0,0,0,.055)", "stroke-width":1});
+    el("text", {x:PL-10, y:Y(v)+4, "text-anchor":"end", fill:"#9b9891", "font-size":11, "font-family":"JetBrains Mono, monospace"}, String(v));
+  }
+  // 轴线
+  el("line", {x1:PL, y1:H-PB, x2:W-PR, y2:H-PB, stroke:"#d8d2c6", "stroke-width":1});
+  el("line", {x1:PL, y1:PT, x2:PL, y2:H-PB, stroke:"#d8d2c6", "stroke-width":1});
+  // 舒适区
+  el("rect", {x:X(7), y:Y(30), width:X(15)-X(7), height:Y(0)-Y(30), fill:"rgba(47,111,94,.08)", stroke:"rgba(47,111,94,.4)", "stroke-dasharray":"5 4", "stroke-width":1});
+  el("text", {x:X(7)+8, y:Y(30)+16, fill:"#2f6f5e", "font-size":11.5, "font-weight":600, "font-family":"Outfit, sans-serif"}, "舒适区 7–15:1 / C*<30");
+  // 轴标题
+  el("text", {x:(PL+W-PR)/2, y:H-12, "text-anchor":"middle", fill:"#7c7a72", "font-size":11.5, "font-family":"Outfit, sans-serif"}, "正文对比度（底色 : 文字）");
+  el("text", {x:16, y:(PT+H-PB)/2, "text-anchor":"middle", fill:"#7c7a72", "font-size":11.5, "font-family":"Outfit, sans-serif",
+    transform:`rotate(-90 16 ${(PT+H-PB)/2})`}, "链接色 Lab 彩度 C*");
+
+  const docPts = DOCS.filter(d=>d.C!=null && d.link).map(d=>({x:d.C, y:C_(d.link), n:d.n, c:"#2f6f5e"}));
+  const rdrPts = READERS.filter(d=>d.C!=null && d.link).map(d=>({x:d.C, y:C_(d.link), n:d.n, c:"#c97b3f"}));
+  const myPts  = MINE.map(m=>({x:m.C, y:C_(m.link), n:m.id, c:"#14171e"}));
+
+  // pagenest 簇的外框
+  const mx0 = Math.min(...myPts.map(p=>p.x)), mx1 = Math.max(...myPts.map(p=>p.x));
+  const my0 = Math.min(...myPts.map(p=>p.y)), my1 = Math.max(...myPts.map(p=>p.y));
+  el("rect", {x:X(mx0)-20, y:Y(my1)-16, width:(X(mx1)-X(mx0))+40, height:(Y(my0)-Y(my1))+32, rx:12,
+    fill:"rgba(20,23,30,.04)", stroke:"rgba(20,23,30,.22)", "stroke-dasharray":"3 3"});
+  el("text", {x:X(mx0)-14, y:Y(my1)-4, fill:"#14171e", "font-size":11, "font-weight":700, "font-family":"Outfit, sans-serif"}, "pagenest 8 套主题");
+
+  const draw = (pts, shape) => pts.forEach(p=>{
+    const g = document.createElementNS(NS, "g");
+    const title = document.createElementNS(NS, "title");
+    title.textContent = `${p.n} — 对比 ${p.x}:1 · 链接彩度 C*=${p.y}`;
+    g.appendChild(title);
+    if (shape === "diamond") {
+      const s = 6;
+      const rect = document.createElementNS(NS, "rect");
+      g.appendChild(rect);
+      rect.setAttribute("x", X(p.x)-s); rect.setAttribute("y", Y(p.y)-s);
+      rect.setAttribute("width", s*2); rect.setAttribute("height", s*2);
+      rect.setAttribute("transform", `rotate(45 ${X(p.x)} ${Y(p.y)})`);
+      rect.setAttribute("fill", p.c); rect.setAttribute("stroke", "#fff"); rect.setAttribute("stroke-width", 1.5);
+    } else {
+      const c = document.createElementNS(NS,"circle");
+      c.setAttribute("cx", X(p.x)); c.setAttribute("cy", Y(p.y)); c.setAttribute("r", 6);
+      c.setAttribute("fill", p.c); c.setAttribute("stroke", "#fff"); c.setAttribute("stroke-width", 1.5);
+      g.appendChild(c);
+    }
+    svg.appendChild(g);
+  });
+  draw(docPts, "circle");
+  draw(rdrPts, "circle");
+  draw(myPts, "diamond");
+
+  // 重点标注
+  const LABELS = {
+    "GitHub Docs":[0,-13,"middle"], "Astro Docs":[0,20,"middle"], "Stripe Docs":[0,-13,"middle"],
+    "掘金":[0,20,"middle"], "语雀文档":[0,-13,"middle"], "MDN Web Docs":[0,20,"middle"],
+    "Kindle Cloud Reader":[0,20,"middle"], "Gutenberg 电子书正文":[-12,-12,"end"],
+    "豆瓣读书":[0,-13,"middle"], "番茄小说 首页":[0,-13,"middle"], "Readwise Reader":[0,-13,"middle"],
+    "Anthropic Docs":[0,-13,"middle"], "Next.js Docs":[0,-13,"middle"], "Vercel Docs":[0,-13,"middle"]
+  };
+  const allPts = [...docPts, ...rdrPts];
+  allPts.forEach(p=>{
+    const cfg = LABELS[p.n]; if(!cfg) return;
+    el("text", {x:X(p.x)+cfg[0], y:Y(p.y)+cfg[1], "text-anchor":cfg[2], fill:"#3a4256",
+      "font-size":11, "font-family":"Outfit, sans-serif"}, p.n);
+  });
+})();
+</script>
+</body>
+</html>

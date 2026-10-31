@@ -7,6 +7,10 @@ export type IconName =
   | "moon"
   | "sun"
   | "leaf"
+  | "book"
+  | "cup"
+  | "contrast"
+  | "display"
   | "file"
   | "folder"
   | "folderOpen"
@@ -26,7 +30,10 @@ export type IconName =
   | "check"
   | "chevronLeft"
   | "chevronRight"
-  | "external";
+  | "external"
+  | "sidebar"
+  | "sidebarRight"
+  | "github";
 
 const paths: Record<IconName, React.ReactNode> = {
   menu: (
@@ -52,6 +59,30 @@ const paths: Record<IconName, React.ReactNode> = {
     <>
       <path d="M20 4C12 4.5 6.5 8 5.3 14.1c-.7 3.6 1.6 5.9 4.4 5.9 6 0 9.4-6.7 10.3-16Z" />
       <path d="M4 20c2.7-4.2 6.1-7.2 10.5-9.2" />
+    </>
+  ),
+  book: (
+    <>
+      <path d="M12 6.5C10.4 5.2 8.2 4.5 5.5 4.5H3v13h2.5c2.7 0 4.9.7 6.5 2 1.6-1.3 3.8-2 6.5-2H21v-13h-2.5c-2.7 0-4.9.7-6.5 2Z" />
+      <path d="M12 6.5v13" />
+    </>
+  ),
+  cup: (
+    <>
+      <path d="M4.5 7.5h12v6a6 6 0 0 1-12 0Z" />
+      <path d="M16.5 9H19a2 2 0 0 1 0 4h-2.5M4 20.5h13" />
+    </>
+  ),
+  contrast: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 3.5a8.5 8.5 0 0 1 0 17Z" fill="currentColor" stroke="none" />
+    </>
+  ),
+  display: (
+    <>
+      <rect x="3" y="4.5" width="18" height="12" rx="1.8" />
+      <path d="M9 20.5h6M12 16.5v4" />
     </>
   ),
   file: (
@@ -104,9 +135,28 @@ const paths: Record<IconName, React.ReactNode> = {
     <path d="M20 7v5h-5M4 17v-5h5M6.1 9a7 7 0 0 1 11.4-2.3L20 9M4 15l2.5 2.3A7 7 0 0 0 18 15" />
   ),
   check: <path d="m5 12 4 4L19 6" />,
-  chevronLeft: <path d="m14 6-6 6 6 6" />,
-  chevronRight: <path d="m10 6 6 6-6 6" />,
+  chevronLeft: <path d="m15 6-6 6 6 6" />,
+  chevronRight: <path d="m9 6 6 6-6 6" />,
   external: <path d="M14 4h6v6M20 4l-9 9M18 13v7H4V6h7" />,
+  sidebar: (
+    <>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" />
+      <path d="M9.5 4.5v15M5.8 8.5h1.6M5.8 11.5h1.6" />
+    </>
+  ),
+  sidebarRight: (
+    <>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.2" />
+      <path d="M14.5 4.5v15M16.6 8.5h1.6M16.6 11.5h1.6" />
+    </>
+  ),
+  github: (
+    <path
+      d="M12 2.5a9.5 9.5 0 0 0-3 18.5c.5.1.7-.2.7-.5v-1.7c-2.7.6-3.3-1.2-3.3-1.2-.4-1.1-1.1-1.4-1.1-1.4-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.3 1.1 2.9.8.1-.6.3-1.1.6-1.3-2.1-.2-4.3-1.1-4.3-4.7 0-1 .4-1.9 1-2.6-.1-.2-.4-1.2.1-2.5 0 0 .8-.3 2.6 1a9 9 0 0 1 4.8 0c1.8-1.3 2.6-1 2.6-1 .5 1.3.2 2.3.1 2.5.6.7 1 1.6 1 2.6 0 3.7-2.2 4.5-4.3 4.7.3.3.6.9.6 1.8v2.6c0 .3.2.6.7.5A9.5 9.5 0 0 0 12 2.5Z"
+      fill="currentColor"
+      stroke="none"
+    />
+  ),
 };
 
 export function Icon({

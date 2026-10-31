@@ -29,9 +29,10 @@ import {
   RestoreDialog,
   SearchDialog,
 } from "./components/Dialogs";
-import { Icon, type IconName } from "./components/Icon";
+import { Icon } from "./components/Icon";
 import { Sidebar } from "./components/Sidebar";
 import { SourceEditor } from "./components/SourceEditor";
+import { themeKindOf, themeOptions } from "./themes";
 import {
   blockAtLine,
   headingsFromBlocks,
@@ -70,16 +71,7 @@ const closedEditorSession: Omit<EditorSession, "docId"> = {
   editingBlockId: null,
 };
 
-const themeOptions: Array<{
-  value: "paper" | "eye" | "night";
-  label: string;
-  description: string;
-  icon: IconName;
-}> = [
-  { value: "paper", label: "纸页", description: "温暖米白", icon: "sun" },
-  { value: "eye", label: "护眼", description: "柔和草绿", icon: "leaf" },
-  { value: "night", label: "夜读", description: "低亮暖黑", icon: "moon" },
-];
+const themeGroups: string[] = [...new Set(themeOptions.map((option) => option.group))];
 
 const toolbarCommands: Array<{
   command: string;
@@ -123,6 +115,7 @@ export default function App() {
   const setTabScroll = useWorkspace((state) => state.setTabScroll);
   const setTheme = useWorkspace((state) => state.setTheme);
   const setSidebarCollapsed = useWorkspace((state) => state.setSidebarCollapsed);
+  const setRailCollapsed = useWorkspace((state) => state.setRailCollapsed);
   const setFolders = useWorkspace((state) => state.setFolders);
   const setRailTab = useWorkspace((state) => state.setRailTab);
   const setNavMode = useWorkspace((state) => state.setNavMode);
@@ -170,6 +163,7 @@ export default function App() {
   const [toast, setToast] = useState("");
   const [saving, setSaving] = useState(false);
   const [activeHeadingId, setActiveHeadingId] = useState<string | null>(null);
+  const [readProgress, setReadProgress] = useState(0);
   const mainScrollRef = useRef<HTMLElement>(null);
   const toastTimerRef = useRef<number | null>(null);
   const scrollTimerRef = useRef<number | null>(null);
@@ -202,6 +196,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = ui.theme;
+    document.documentElement.dataset.themeKind = themeKindOf(ui.theme);
   }, [ui.theme]);
 
   useEffect(() => {
@@ -295,6 +290,10 @@ export default function App() {
         event.preventDefault();
         setSearchOpen(true);
       }
+      if ((event.metaKey || event.ctrlKey) && event.key === "\\") {
+        event.preventDefault();
+        setSidebarCollapsed(!useWorkspace.getState().ui.sidebarCollapsed);
+      }
       if (event.key === "/" && !typing) {
         event.preventDefault();
         document.querySelector<HTMLInputElement>(`.${styles.searchBox} input`)?.focus();
@@ -327,6 +326,29 @@ export default function App() {
       if (scrollTimerRef.current) window.clearTimeout(scrollTimerRef.current);
     };
   }, [activeDocId, headings, setTabScroll]);
+
+  useEffect(() => {
+    const container = mainScrollRef.current;
+    if (!container) return;
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const max = container.scrollHeight - container.clientHeight;
+        setReadProgress(max > 0 ? Math.min(1, container.scrollTop / max) : 0);
+      });
+    };
+    update();
+    const resizeObserver = new ResizeObserver(update);
+    resizeObserver.observe(container);
+    if (container.firstElementChild) resizeObserver.observe(container.firstElementChild);
+    container.addEventListener("scroll", update, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+      container.removeEventListener("scroll", update);
+    };
+  }, [activeDocId, sourceMode]);
 
   async function saveDocumentById(
     docId: string,
@@ -590,21 +612,21 @@ export default function App() {
   return (
     <Tooltip.Provider delayDuration={450}>
       <div className={styles.app}>
+        {activeDoc && !sourceMode ? (
+          <div className={styles.readProgress} aria-hidden="true">
+            <span style={{ transform: `scaleX(${readProgress})` }} />
+          </div>
+        ) : null}
         <header className={styles.topbar}>
           <div className={styles.topbarStart}>
-            <TooltipButton label={ui.sidebarCollapsed ? "展开目录" : "收起目录"}>
-              <button
-                className={styles.iconButton}
-                type="button"
-                aria-label={ui.sidebarCollapsed ? "展开目录" : "收起目录"}
-                onClick={() => {
-                  if (window.innerWidth < 768) setMobileSidebarOpen(true);
-                  else setSidebarCollapsed(!ui.sidebarCollapsed);
-                }}
-              >
-                <Icon name="menu" size={19} />
-              </button>
-            </TooltipButton>
+            <button
+              className={`${styles.iconButton} ${styles.mobileMenuButton}`}
+              type="button"
+              aria-label="打开目录"
+              onClick={() => setMobileSidebarOpen(true)}
+            >
+              <Icon name="menu" size={19} />
+            </button>
             <div className={styles.brand}>
               <span className={styles.brandMark}>栖</span>
               <span className={styles.brandCopy}>
@@ -684,23 +706,35 @@ export default function App() {
                   <DropdownMenu.Label className={styles.themeMenuLabel}>
                     阅读主题
                   </DropdownMenu.Label>
-                  {themeOptions.map((option) => (
-                    <DropdownMenu.Item
-                      className={styles.themeMenuItem}
-                      key={option.value}
-                      onSelect={() => setTheme(option.value)}
-                    >
-                      <span
-                        className={`${styles.themeSwatch} ${styles[`themeSwatch${option.value}`]}`}
-                      />
-                      <span className={styles.themeMenuCopy}>
-                        <strong>{option.label}</strong>
-                        <small>{option.description}</small>
-                      </span>
-                      {ui.theme === option.value ? (
-                        <Icon className={styles.themeCheck} name="check" size={15} />
-                      ) : null}
-                    </DropdownMenu.Item>
+                  {themeGroups.map((group) => (
+                    <DropdownMenu.Group key={group}>
+                      <DropdownMenu.Label className={styles.themeGroupLabel}>
+                        {group}
+                      </DropdownMenu.Label>
+                      {themeOptions
+                        .filter((option) => option.group === group)
+                        .map((option) => (
+                          <DropdownMenu.Item
+                            className={styles.themeMenuItem}
+                            key={option.value}
+                            onSelect={() => setTheme(option.value)}
+                          >
+                            <span
+                              className={styles.themeSwatch}
+                              style={{
+                                background: `linear-gradient(135deg, ${option.swatch[0]} 0 52%, ${option.swatch[1]} 52% 100%)`,
+                              }}
+                            />
+                            <span className={styles.themeMenuCopy}>
+                              <strong>{option.label}</strong>
+                              <small>{option.description}</small>
+                            </span>
+                            {ui.theme === option.value ? (
+                              <Icon className={styles.themeCheck} name="check" size={15} />
+                            ) : null}
+                          </DropdownMenu.Item>
+                        ))}
+                    </DropdownMenu.Group>
                   ))}
                 </DropdownMenu.Content>
               </DropdownMenu.Portal>
@@ -716,7 +750,11 @@ export default function App() {
           </div>
         </header>
 
-        <div className={styles.workspace}>
+        <div
+          className={`${styles.workspace} ${
+            ui.sidebarCollapsed ? styles.workspaceSidebarClosed : styles.workspaceSidebarOpen
+          } ${ui.railCollapsed ? styles.workspaceRailClosed : styles.workspaceRailOpen}`}
+        >
           {(mobileSidebarOpen || mobileRailOpen) && (
             <button
               className={styles.drawerScrim}
@@ -728,6 +766,18 @@ export default function App() {
               }}
             />
           )}
+          <TooltipButton label={ui.sidebarCollapsed ? "展开资料夹" : "收起资料夹"} side="right">
+            <button
+              className={`${styles.panelToggle} ${styles.panelToggleLeft}`}
+              type="button"
+              aria-label={ui.sidebarCollapsed ? "展开资料夹" : "收起资料夹"}
+              aria-pressed={!ui.sidebarCollapsed}
+              onClick={() => setSidebarCollapsed(!ui.sidebarCollapsed)}
+            >
+              <Icon name={ui.sidebarCollapsed ? "chevronRight" : "chevronLeft"} size={13} />
+            </button>
+          </TooltipButton>
+
           <Sidebar
             documents={documents}
             activeDocId={activeDocId}
@@ -748,38 +798,70 @@ export default function App() {
             onNewDocument={() => setNewDocumentOpen(true)}
             onOpenSettings={() => setSettingsOpen(true)}
             onRescan={() => void loadBootstrap()}
+            onCollapse={() => setSidebarCollapsed(true)}
             onCloseMobile={() => setMobileSidebarOpen(false)}
           />
 
           <section className={styles.contentColumn}>
             <div className={styles.tabStrip}>
-              <div className={styles.tabList} role="tablist" aria-label="已打开文档">
+              {ui.sidebarCollapsed ? (
+                <button
+                  className={styles.sidebarExpandButton}
+                  type="button"
+                  aria-label="展开侧栏"
+                  title="展开侧栏（⌘\）"
+                  onClick={() => setSidebarCollapsed(false)}
+                >
+                  <Icon name="sidebar" size={17} />
+                </button>
+              ) : null}
+              <nav className={styles.tabList} aria-label="已打开文档">
                 {tabs.map((tab) => {
                   const doc = docs[tab.docId];
                   if (!doc) return null;
+                  const selected = activeDocId === tab.docId;
                   return (
-                    <button
-                      className={`${styles.tab} ${activeDocId === tab.docId ? styles.tabActive : ""}`}
-                      type="button"
-                      role="tab"
-                      aria-selected={activeDocId === tab.docId}
-                      onClick={() => activateDocument(tab.docId)}
+                    <div
+                      className={`${styles.tab} ${selected ? styles.tabActive : ""}`}
+                      onAuxClick={(event) => {
+                        if (event.button === 1) requestClose(tab.docId);
+                      }}
                       key={tab.docId}
                     >
-                      {dirtyIds.has(tab.docId) ? <i className={styles.dirtyDot} /> : null}
-                      <span>{doc.title}</span>
-                    </button>
+                      <button
+                        className={styles.tabMain}
+                        type="button"
+                        aria-current={selected ? "page" : undefined}
+                        title={doc.path}
+                        onClick={() => activateDocument(tab.docId)}
+                      >
+                        {dirtyIds.has(tab.docId) ? <i className={styles.dirtyDot} /> : null}
+                        <span>{doc.title}</span>
+                      </button>
+                      <button
+                        className={styles.tabClose}
+                        type="button"
+                        aria-label={`关闭 ${doc.title}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          requestClose(tab.docId);
+                        }}
+                      >
+                        <Icon name="close" size={12} />
+                      </button>
+                    </div>
                   );
                 })}
-              </div>
-              {activeDoc ? (
+              </nav>
+              {ui.railCollapsed ? (
                 <button
-                  className={styles.tabClose}
+                  className={styles.railExpandButton}
                   type="button"
-                  aria-label={`关闭 ${activeDoc.title}`}
-                  onClick={() => requestClose(activeDoc.id)}
+                  aria-label="展开本页侧栏"
+                  title="展开本页侧栏"
+                  onClick={() => setRailCollapsed(false)}
                 >
-                  <Icon name="close" size={13} />
+                  <Icon name="sidebarRight" size={17} />
                 </button>
               ) : null}
             </div>
@@ -941,7 +1023,7 @@ export default function App() {
                 </div>
                 <SourceEditor
                   markdown={markdown}
-                  dark={ui.theme === "night"}
+                  dark={themeKindOf(ui.theme) === "dark"}
                   onChange={(value) => activeDoc && setDraft(activeDoc.id, value)}
                   onSave={() => void saveAndFinishEditing()}
                 />
@@ -990,7 +1072,9 @@ export default function App() {
           </section>
 
           <aside
-            className={`${styles.rail} ${mobileRailOpen ? styles.railMobileOpen : ""}`}
+            className={`${styles.rail} ${ui.railCollapsed ? styles.railCollapsed : ""} ${
+              mobileRailOpen ? styles.railMobileOpen : ""
+            }`}
             aria-label="本页导航与历史"
           >
             <div className={styles.railMobileHead}>
@@ -1004,15 +1088,26 @@ export default function App() {
               onValueChange={(value) => setRailTab(value === "history" ? "history" : "outline")}
               className={styles.railTabs}
             >
-              <Tabs.List className={styles.railTabList} aria-label="本页侧栏">
-                <Tabs.Trigger value="outline">
-                  <Icon name="outline" size={14} /> 目录
-                </Tabs.Trigger>
-                <Tabs.Trigger value="history">
-                  <Icon name="history" size={14} /> 历史
-                  <span>{activeVersions.length}</span>
-                </Tabs.Trigger>
-              </Tabs.List>
+              <div className={styles.railHead}>
+                <Tabs.List className={styles.railTabList} aria-label="本页侧栏">
+                  <Tabs.Trigger value="outline">
+                    <Icon name="outline" size={14} /> 目录
+                  </Tabs.Trigger>
+                  <Tabs.Trigger value="history">
+                    <Icon name="history" size={14} /> 历史
+                    <span>{activeVersions.length}</span>
+                  </Tabs.Trigger>
+                </Tabs.List>
+                <button
+                  className={styles.railCollapseButton}
+                  type="button"
+                  aria-label="收起本页侧栏"
+                  title="收起本页侧栏"
+                  onClick={() => setRailCollapsed(true)}
+                >
+                  <Icon name="sidebarRight" size={17} />
+                </button>
+              </div>
               <Tabs.Content value="outline" className={styles.railContent}>
                 <div className={styles.outline}>
                   {headings.map((heading) => (
@@ -1051,6 +1146,18 @@ export default function App() {
               </Tabs.Content>
             </Tabs.Root>
           </aside>
+
+          <TooltipButton label={ui.railCollapsed ? "展开本页导航" : "收起本页导航"} side="left">
+            <button
+              className={`${styles.panelToggle} ${styles.panelToggleRight}`}
+              type="button"
+              aria-label={ui.railCollapsed ? "展开本页导航" : "收起本页导航"}
+              aria-pressed={!ui.railCollapsed}
+              onClick={() => setRailCollapsed(!ui.railCollapsed)}
+            >
+              <Icon name={ui.railCollapsed ? "chevronLeft" : "chevronRight"} size={13} />
+            </button>
+          </TooltipButton>
         </div>
 
         <SearchDialog
@@ -1137,12 +1244,20 @@ export default function App() {
   );
 }
 
-function TooltipButton({ label, children }: { label: string; children: React.ReactNode }) {
+function TooltipButton({
+  label,
+  side,
+  children,
+}: {
+  label: string;
+  side?: "top" | "right" | "bottom" | "left";
+  children: React.ReactNode;
+}) {
   return (
     <Tooltip.Root>
       <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
       <Tooltip.Portal>
-        <Tooltip.Content className={styles.tooltip} sideOffset={7}>
+        <Tooltip.Content className={styles.tooltip} side={side} sideOffset={7}>
           {label}
           <Tooltip.Arrow className={styles.tooltipArrow} />
         </Tooltip.Content>
